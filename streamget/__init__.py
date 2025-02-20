@@ -13,7 +13,7 @@ node_execute_dir = Path(current_dir) / 'node'
 current_env_path = os.environ.get('PATH')
 os.environ['PATH'] = str(node_execute_dir) + os.pathsep + current_env_path
 
-
+from .data import StreamData
 from .platforms.douyin.live_stream import DouyinLiveStream
 from .platforms.tiktok.live_stream import TikTokLiveStream
 from .platforms.kuaishou.live_stream import KwaiLiveStream
@@ -53,6 +53,7 @@ from .platforms.langlive.live_stream import LangLiveStream
 from .platforms.piaopiao.live_stream import PiaopaioLiveStream
 from .platforms.sixroom.live_stream import SixRoomLiveStream
 from .platforms.lehai.live_stream import LehaiLiveStream
+from .platforms.huamao.live_stream import HuamaoLiveStream
 from .platforms.shopee.live_stream import ShopeeLiveStream
 from .platforms.youtube.live_stream import YoutubeLiveStream
 from .platforms.taobao.live_stream import TaobaoLiveStream
@@ -64,6 +65,7 @@ __all__ = [
     "__description__",
     "__title__",
     "__version__",
+    "StreamData",
     "DouyinLiveStream",
     "TikTokLiveStream",
     "KwaiLiveStream",
@@ -103,6 +105,7 @@ __all__ = [
     "PiaopaioLiveStream",
     "SixRoomLiveStream",
     "LehaiLiveStream",
+    "HuamaoLiveStream",
     "ShopeeLiveStream",
     "YoutubeLiveStream",
     "TaobaoLiveStream",
