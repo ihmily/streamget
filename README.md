@@ -101,14 +101,13 @@ StreamData(platform='xxxx', anchor_name='xxxx', is_live=True, m3u8_url="xxx"...)
 
 ## Supported Quality
 
-| Chinese clarity | abbreviation | Full Name             | Note                                               |
-| :-------------- | :----------- | :-------------------- | :------------------------------------------------- |
-| 原画            | `OD`         | Original Definition   | Highest clarity, original picture quality          |
-| 蓝光            | `BD`         | Blue-ray Definition   | High definition close to blue light quality        |
-| 超清            | `UHD`        | Ultra High Definition | Ultra high definition                              |
-| 高清            | `HD`         | High Definition       | High definition, usually referring to 1080p        |
-| 标清            | `SD`         | Standard Definition   | Standard clarity, usually referring to 480p        |
-| 流畅            | `LD`         | Low Definition        | Low definition, usually referring to 360p or lower |
+| Chinese clarity | abbreviation | Full Name             | Note                                                |
+| :-------------- | :----------- | :-------------------- | :-------------------------------------------------- |
+| 原画            | `OD`         | Original Definition   | Highest clarity, original picture quality, Blue-ray |
+| 超清            | `UHD`        | Ultra High Definition | Ultra high definition                               |
+| 高清            | `HD`         | High Definition       | High definition, usually referring to 1080p         |
+| 标清            | `SD`         | Standard Definition   | Standard clarity, usually referring to 480p         |
+| 流畅            | `LD`         | Low Definition        | Low definition, usually referring to 360p or lower  |
 
 ## Contributing
 

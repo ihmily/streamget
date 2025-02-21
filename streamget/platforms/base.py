@@ -58,7 +58,7 @@ class BaseLiveStream:
         Returns:
             tuple: A tuple containing the quality string and its index.
         """
-        QUALITY_MAPPING = {"OD": 0, "BD": 0, "UHD": 1, "HD": 2, "SD": 3, "LD": 4}
+        QUALITY_MAPPING = {"OD": 0, "UHD": 1, "HD": 2, "SD": 3, "LD": 4}
 
         if not quality:
             return list(QUALITY_MAPPING.items())[0]
