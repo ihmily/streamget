@@ -1,7 +1,7 @@
 [project]
 name = "streamget"
 version = "4.0.3"
-description = "A library to fetch live stream URLs from various platforms."
+description = "A Multi-Platform Live Stream Parser Library."
 authors = [{ name = "Hmily" }]
 license = {text = "MIT"}
 readme = "README.md"

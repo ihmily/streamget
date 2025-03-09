@@ -7,8 +7,17 @@ def show_welcome_help():
     """
     print("Welcome to streamget!")
     print(f"Version: {__version__}")
-    print("Description:")
-    print("A library to fetch live stream URLs from various platforms.")
+    print("Description: A Multi-Platform Live Stream Parser Library.")
+
+    print("\nCommand Line Tools:")
+    print("  streamget [-h] [-help]  -- help info")
+    print("  Install Node.js runtime:")
+    print("    streamget install-node [--version] [--path] [--help]")
+    print("    Example:")
+    print("      streamget install-node")
+    print("      streamget install-node --version 20.0.0")
+    print("      streamget install-node --version 20.0.0 --path ./node")
+
     print("\nSupported Platforms:")
     print(__all__[4:])
     print("\nUsage:")

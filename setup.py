@@ -5,7 +5,7 @@ setup(
     name='streamget',
     version='4.0.3',
     author='Hmily',
-    description='A library to fetch live stream URLs from various platforms.',
+    description='A Multi-Platform Live Stream Parser Library.',
     long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/ihmily/streamget',
