@@ -36,7 +36,7 @@ class TaobaoLiveStream(BaseLiveStream):
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
         if '_m_h5_tk' not in self.pc_headers['cookie']:
-            print('Error: Cookies is empty! please input correct cookies')
+            raise Exception('Error: Cookies is empty! please input correct cookies')
 
         live_id = self.get_params(url, 'id')
         if not live_id:
@@ -65,7 +65,10 @@ class TaobaoLiveStream(BaseLiveStream):
             _m_h5_tk = re.findall('_m_h5_tk=(.*?);', self.pc_headers['cookie'])[0]
             t13 = int(time.time() * 1000)
             pre_sign_str = f'{_m_h5_tk.split("_")[0]}&{t13}&{app_key}&' + params['data']
-            sign = execjs.compile(open(f'{JS_SCRIPT_PATH}/taobao-sign.js').read()).call('sign', pre_sign_str)
+            try:
+                sign = execjs.compile(open(f'{JS_SCRIPT_PATH}/taobao-sign.js').read()).call('sign', pre_sign_str)
+            except execjs.ProgramError:
+                raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
             params |= {'sign': sign, 't': t13}
             api = f'https://h5api.m.taobao.com/h5/mtop.mediaplatform.live.livedetail/4.0/?{urllib.parse.urlencode(params)}'
             jsonp_str, new_cookie = await async_req(url=api, proxy_addr=self.proxy_addr, headers=self.pc_headers,
@@ -90,7 +93,8 @@ class TaobaoLiveStream(BaseLiveStream):
                     self.pc_headers['cookie'] = re.sub('_m_h5_tk_enc=(.*?);', new_cookie['_m_h5_tk_enc'],
                                                        self.pc_headers['cookie'])
                 else:
-                    print('Error: Try to update cookie failed, please update the cookies in the configuration file')
+                    raise Exception(
+                        'Error: Try to update cookie failed, please update the cookies in the configuration file')
                 return result
             else:
                 raise Exception(f'Error: Taobao live data fetch failed, {ret_msg[0]}')

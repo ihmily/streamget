@@ -32,8 +32,8 @@ class YoutubeLiveStream(BaseLiveStream):
             return json_data
         result = {"anchor_name": "", "is_live": False}
         if 'videoDetails' not in json_data:
-            print("Error: Please log in to YouTube on your device's webpage and configure cookies in the config.ini")
-            return result
+            raise Exception(
+                "Error: Please log in to YouTube on your device's webpage and configure cookies in the config.ini")
         result['anchor_name'] = json_data['videoDetails']['author']
         live_status = json_data['videoDetails'].get('isLive')
         if live_status:

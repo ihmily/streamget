@@ -38,21 +38,16 @@ class FlexTVLiveStream(BaseLiveStream):
         url = 'https://api.flextv.co.kr/v2/api/auth/signin'
 
         try:
-            print("Logging into FlexTV platform...")
             cookie_dict = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers, json_data=data,
                                           return_cookies=True, timeout=20)
             if cookie_dict and 'flx_oauth_access' in cookie_dict:
                 cookie_str = '; '.join([f"{k}={v}" for k, v in cookie_dict.items()])
                 return cookie_str
             else:
-                print("Please check if the FlexTV account and password in the configuration file are correct.")
-                return None
+                raise Exception("Please check if the FlexTV account and password in the configuration file are correct.")
 
         except Exception as e:
-            print(f"FlexTV login request exception: {e}")
-            raise Exception(
-                "FlexTV login failed, please check if the account and password in the configuration file are correct."
-            )
+            raise Exception(f"FlexTV login request exception: {e}")
 
     async def get_flextv_stream_url(self, url: str) -> str:
         async def fetch_data() -> dict:
@@ -92,16 +87,11 @@ class FlexTVLiveStream(BaseLiveStream):
             channel_data = json_data['props']['pageProps']['channel']
             login_need = 'message' in channel_data and '로그인후 이용이 가능합니다.' in channel_data.get('message')
             if login_need:
-                print("FlexTV live stream retrieval failed [not logged in]: 19+ live streams are only available for "
-                      "logged-in adults.")
-                print("Attempting to log in to the FlexTV live streaming platform, please ensure your account and "
-                      "password are correctly filled in the configuration file.")
                 if len(self.username) < 6 or len(self.password) < 8:
-                    raise RuntimeError("FlexTV登录失败！请在config.ini配置文件中填写正确的FlexTV平台的账号和密码")
+                    raise RuntimeError("FlexTV login failed! Please fill in the correct FlexTV platform account"
+                                       " and password in the config. ini configuration file")
                 new_cookies = await self.login_flextv()
-                if new_cookies:
-                    print("Logged into FlexTV platform successfully! Starting to fetch live streaming data...")
-                else:
+                if not new_cookies:
                     raise RuntimeError("FlexTV login failed")
                 cookies = new_cookies if new_cookies else self.cookies
                 self.pc_headers['Cookie'] = cookies
@@ -129,7 +119,8 @@ class FlexTVLiveStream(BaseLiveStream):
                 anchor_name = re.search('<meta name="twitter:title" content="(.*?)의', html_str).group(1)
                 result["anchor_name"] = anchor_name
         except Exception as e:
-            print("Failed to retrieve data from FlexTV live room", e)
+            raise Exception("Failed to retrieve data from FlexTV live room", e)
+
         result['new_cookies'] = new_cookies
         return result
 

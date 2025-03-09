@@ -13,7 +13,7 @@ class KwaiLiveStream(BaseLiveStream):
         super().__init__(proxy_addr, cookies)
         self.pc_headers = self._get_pc_headers()
 
-    async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
+    async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict | None:
         """
         Fetches web stream data for a live room.
 
@@ -27,27 +27,23 @@ class KwaiLiveStream(BaseLiveStream):
         try:
             html_str = await async_req(url=url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         except Exception as e:
-            print(f"Failed to fetch data from {url}.{e}")
-            return {"type": 1, "is_live": False}
+            raise Exception(f"Failed to fetch data from {url}.{e}")
 
         try:
             json_str = re.search('<script>window.__INITIAL_STATE__=(.*?);\\(function\\(\\)\\{var s;', html_str).group(1)
             play_list = re.findall('(\\{"liveStream".*?),"gameInfo', json_str)[0] + "}"
             play_list = json.loads(play_list)
         except (AttributeError, IndexError, json.JSONDecodeError) as e:
-            print(f"Failed to parse JSON data from {url}. Error: {e}")
-            return {"type": 1, "is_live": False}
+            raise Exception(f"Failed to parse JSON data from {url}. Error: {e}")
 
         result = {"type": 2, "is_live": False}
 
         if 'errorType' in play_list or 'liveStream' not in play_list:
             error_msg = play_list['errorType']['title'] + play_list['errorType']['content']
-            print(f"Failed URL: {url} Error message: {error_msg}")
-            return result
+            raise Exception(f"Failed URL: {url} Error message: {error_msg}")
 
         if not play_list.get('liveStream'):
-            print("IP banned. Please change device or network.")
-            return result
+            raise Exception("IP banned. Please change device or network.")
 
         anchor_name = play_list['author'].get('name', '')
         result.update({"anchor_name": anchor_name})

@@ -67,8 +67,8 @@ class ShopeeLiveStream(BaseLiveStream):
                                    proxy_addr=self.proxy_addr, headers=self.mobile_headers)
         json_data = json.loads(json_str)
         if not json_data.get('data'):
-            print("Fetch shopee live data failed, please update the address of the live broadcast room and try again.")
-            return result
+            raise Exception(
+                "Fetch shopee live data failed, please update the address of the live broadcast room and try again.")
         uid = json_data['data']['session']['uid']
         anchor_name = json_data['data']['session']['nickname']
         live_status = json_data['data']['session']['status']

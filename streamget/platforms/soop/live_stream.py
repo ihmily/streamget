@@ -51,9 +51,8 @@ class SoopLiveStream(BaseLiveStream):
             cookie_str = '; '.join([f"{k}={v}" for k, v in cookie_dict.items()])
             return cookie_str
         except Exception as e:
-            print(f"An error occurred during login: {e}")
             raise Exception(
-                "sooplive login failed, please check if the account password in the configuration file is correct."
+                f"sooplive login failed, please check if the account password in the configuration file is correct. {e}"
             )
 
     async def _get_sooplive_cdn_url(self, broad_no: str) -> dict:
@@ -156,7 +155,7 @@ class SoopLiveStream(BaseLiveStream):
             async def handle_login() -> str | None:
                 cookie = await self.login_sooplive()
                 if 'AuthTicket=' in cookie:
-                    print("sooplive platform login successful! Starting to fetch live streaming data...")
+                    # print("sooplive platform login successful! Starting to fetch live streaming data...")
                     return cookie
 
             async def fetch_data(cookie, _result) -> dict:
@@ -175,13 +174,12 @@ class SoopLiveStream(BaseLiveStream):
                 return _result
 
             if json_data['data']['code'] == -3001:
-                print("sooplive live stream failed to retrieve, the live stream just ended.")
-                return result
+                raise Exception("sooplive live stream failed to retrieve, the live stream just ended.")
 
             elif json_data['data']['code'] == -3002:
-                print("sooplive live stream retrieval failed, the live needs 19+, you are not logged in.")
-                print("Attempting to log in to the sooplive live streaming platform with your account and password, "
-                      "please ensure it is configured.")
+                # print("sooplive live stream retrieval failed, the live needs 19+, you are not logged in.")
+                # print("Attempting to log in to the sooplive live streaming platform with your account and password, "
+                #       "please ensure it is configured.")
                 new_cookie = await handle_login()
                 if new_cookie and len(new_cookie) > 0:
                     return await fetch_data(new_cookie, result)
@@ -193,9 +191,8 @@ class SoopLiveStream(BaseLiveStream):
                 else:
                     raise RuntimeError("sooplive login failed, please check if the account and password are correct")
             elif json_data['data']['code'] == -6001:
-                print(f"error message：Please check if the input sooplive live room address "
-                      f"is correct.")
-                return result
+                raise Exception(f"error message：Please check if the input sooplive live room address is correct.")
+
         if json_data['result'] == 1 and anchor_name:
             broad_no = json_data['data']['broad_no']
             hls_authentication_key = json_data['data']['hls_authentication_key']

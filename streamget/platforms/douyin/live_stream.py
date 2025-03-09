@@ -112,7 +112,7 @@ class DouyinLiveStream(BaseLiveStream):
             return json_data
 
         except Exception as e:
-            print(f"First data retrieval failed: {url} Preparing to switch parsing methods due to {e}")
+            raise Exception(f"Fetch failed: {url}, {e}")
 
     async def fetch_stream_url(self, json_data: dict, video_quality: str = 'OD') -> StreamData:
         """

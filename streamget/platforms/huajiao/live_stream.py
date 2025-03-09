@@ -85,10 +85,10 @@ class HuajiaoLiveStream(BaseLiveStream):
         json_data = json.loads(json_str)
 
         if json_data['errmsg'] or not json_data['data'].get('creatime'):
-            print(
+            raise Exception(
                 "Failed to retrieve live room data, the Huajiao live room address is not fixed, please manually change "
                 "the address for recording.")
-            return
+
         data = json_data['data']
         return {
             "anchor_name": data['author']['nickname'],
@@ -119,10 +119,9 @@ class HuajiaoLiveStream(BaseLiveStream):
         else:
             url = await async_req(url.strip(), proxy_addr=self.proxy_addr, headers=self.pc_headers, redirect_url=True)
             if url.rstrip('/') == 'https://www.huajiao.com':
-                print(
-                    "Failed to retrieve live room data, the Huajiao live room address is not fixed, please manually change "
-                    "the address for recording.")
-                return result
+                raise Exception(
+                    "Failed to retrieve live room data, the Huajiao live room address is not fixed, please manually "
+                    "change the address for recording.")
             room_data = await self.get_huajiao_stream_url_app(url)
 
         if room_data:

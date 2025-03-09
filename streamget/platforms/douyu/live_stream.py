@@ -45,10 +45,13 @@ class DouyuLiveStream(BaseLiveStream):
         func_sign = func_sign.replace('(function (', 'function sign(')
         func_sign = func_sign.replace('CryptoJS.MD5(cb).toString()', '"' + rb + '"')
 
-        js = execjs.compile(func_sign)
-        params = js.call('sign', rid, did, t10)
-        params_list = re.findall('=(.*?)(?=&|$)', params)
-        return params_list
+        try:
+            js = execjs.compile(func_sign)
+            params = js.call('sign', rid, did, t10)
+            params_list = re.findall('=(.*?)(?=&|$)', params)
+            return params_list
+        except execjs.ProgramError:
+            raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
 
     async def _fetch_web_stream_url(self, rid: str, rate: str = '-1') -> dict:
 

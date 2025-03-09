@@ -1,7 +1,6 @@
 import os
 import sys
 from pathlib import Path
-from .node_setup import check_node
 from .__version__ import __description__, __title__, __version__
 
 current_file_path = Path(__file__).resolve()
@@ -9,7 +8,7 @@ current_dir = current_file_path.parent
 JS_SCRIPT_PATH = current_dir / 'js'
 
 execute_dir = os.path.split(os.path.realpath(sys.argv[0]))[0]
-node_execute_dir = Path(current_dir) / 'node'
+node_execute_dir = Path(execute_dir) / 'node'
 current_env_path = os.environ.get('PATH')
 os.environ['PATH'] = str(node_execute_dir) + os.pathsep + current_env_path
 
@@ -118,7 +117,5 @@ for __name in __all__:
     if not __name.startswith("__"):
         setattr(__locals[__name], "__module__", "streamget")
 
-check_node()
-
-
-
+# from .scripts.node_setup import check_node
+# check_node()

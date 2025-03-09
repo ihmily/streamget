@@ -95,9 +95,7 @@ class LookLiveStream(BaseLiveStream):
         result = {"anchor_name": anchor_name, "is_live": False}
         if live_status == 1:
             result["is_live"] = True
-            if json_data['data']['roomInfo']['liveType'] == 1:
-                print("Look live currently only supports audio live streaming, not video live streaming!")
-            else:
+            if json_data['data']['roomInfo']['liveType'] != 1:
                 play_url_list = json_data['data']['roomInfo']['liveUrl']
                 live_title = json_data['data']['roomInfo']['title']
                 result |= {

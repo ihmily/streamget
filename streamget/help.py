@@ -1,18 +1,16 @@
 from . import __all__, __version__
 
 
-def main():
+def show_welcome_help():
     """
     Print help information for the streamget package.
     """
     print("Welcome to streamget!")
-    print(f"\nVersion: {__version__}")
-    print("\nDescription:")
+    print(f"Version: {__version__}")
+    print("Description:")
     print("A library to fetch live stream URLs from various platforms.")
     print("\nSupported Platforms:")
-    for platform in __all__:
-        if not platform.startswith("__"):
-            print(f"  - {platform}")
+    print(__all__[4:])
     print("\nUsage:")
     print("  import asyncio")
     print("  from streamget import DouyinLiveStream")
@@ -24,4 +22,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    show_welcome_help()

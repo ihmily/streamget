@@ -118,11 +118,9 @@ class PopkonTVLiveStream(BaseLiveStream):
                 else:
                     raise Exception(f"popkontv login failed, {json_data.get('statusMsg', 'unknown error')}")
         except httpx.HTTPStatusError as e:
-            print(f"HTTP status error occurred during login: {e.response.status_code}")
-            raise
+            raise Exception(f"HTTP status error occurred during login: {e.response.status_code}")
         except Exception as e:
-            print(f"An exception occurred during popkontv login: {e}")
-            raise
+            raise Exception(f"An exception occurred during popkontv login: {e}")
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
@@ -167,17 +165,14 @@ class PopkonTVLiveStream(BaseLiveStream):
             json_str = await fetch_data(self.partner_code)
 
             if 'HTTP Error 400' in json_str or 'statusCd":"E5000' in json_str:
-                print("Failed to retrieve popkontv live stream [token does not exist or has expired]: Please log in to "
-                      "watch.")
-                print("Attempting to log in to the popkontv live streaming platform, please ensure your account "
-                      "and password are correctly filled in the configuration file.")
+
                 if len(self.username) < 4 or len(self.password) < 10:
                     raise RuntimeError("popkontv login failed! Please enter the correct account and password for the "
                                        "popkontv platform in the config.ini file.")
-                print("Logging into popkontv platform...")
+                # print("Logging into popkontv platform...")
                 new_access_token, new_partner_code = await self.login_popkontv()
                 if new_access_token and len(new_access_token) == 640:
-                    print("Logged into popkontv platform successfully! Starting to fetch live streaming data...")
+                    # print("Logged into popkontv platform successfully! Starting to fetch live streaming data...")
                     self.pc_headers['Authorization'] = f'Bearer {new_access_token}'
                     new_token = f'Bearer {new_access_token}'
                     json_str = await fetch_data(new_partner_code)
@@ -186,7 +181,7 @@ class PopkonTVLiveStream(BaseLiveStream):
             json_data = json.loads(json_str)
             status_msg = json_data["statusMsg"]
             if json_data['statusCd'] == "L000A":
-                print("Failed to retrieve live stream source,", status_msg)
+                # print("Failed to retrieve live stream source,", status_msg)
                 raise RuntimeError("You are an unverified member. After logging into the popkontv official website, "
                                    "please verify your mobile phone at the bottom of the 'My Page' > 'Edit My "
                                    "Information' to use the service.")

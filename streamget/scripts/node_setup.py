@@ -16,13 +16,13 @@ import requests
 import re
 import distro
 from tqdm import tqdm
-from .logger import logger
+from ..logger import logger
 
 current_platform = platform.system()
 execute_dir = os.path.split(os.path.realpath(sys.argv[0]))[0]
 current_env_path = os.environ.get('PATH')
 current_dir = Path(__file__).resolve().parent
-node_dir = current_dir
+node_dir = execute_dir
 
 
 def unzip_file(zip_path: str | Path, extract_to: str | Path, delete: bool = True) -> None:

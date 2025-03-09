@@ -47,8 +47,11 @@ class HaixiuLiveStream(BaseLiveStream):
             "c": "10138100100000",
             "_st1": int(time.time() * 1000)
         }
-        ajax_data = execjs.compile(open(f'{JS_SCRIPT_PATH}/haixiu.js').read()).call('sign', params,
-                                                                                    f'{JS_SCRIPT_PATH}/crypto-js.min.js')
+        try:
+            ajax_data = execjs.compile(open(f'{JS_SCRIPT_PATH}/haixiu.js').read()).call(
+                'sign', params, f'{JS_SCRIPT_PATH}/crypto-js.min.js')
+        except execjs.ProgramError:
+            raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
 
         params["accessToken"] = urllib.parse.unquote(urllib.parse.unquote(access_token))
         params['_ajaxData1'] = ajax_data

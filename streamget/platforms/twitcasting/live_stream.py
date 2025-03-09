@@ -52,7 +52,7 @@ class TwitCastingLiveStream(BaseLiveStream):
                 cookie = utils.dict_to_cookie_str(cookie_dict)
                 return cookie
         except Exception as e:
-            print("TwitCasting login error,", e)
+            raise Exception("TwitCasting login error,", e)
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
@@ -80,21 +80,21 @@ class TwitCastingLiveStream(BaseLiveStream):
         try:
             to_login = self.get_params(url, "login")
             if to_login == 'true':
-                print("Attempting to log in to TwitCasting...")
+                # print("Attempting to log in to TwitCasting...")
                 new_cookie = await self.login_twitcasting()
                 if not new_cookie:
                     raise RuntimeError("TwitCasting login failed, please check if the account password in the "
                                        "configuration file is correct")
-                print("TwitCasting login successful! Starting to fetch data...")
+                # print("TwitCasting login successful! Starting to fetch data...")
                 self.mobile_headers['Cookie'] = new_cookie
             anchor_name, live_status, live_title = await get_data()
         except AttributeError:
-            print("Failed to retrieve TwitCasting data, attempting to log in...")
+            # print("Failed to retrieve TwitCasting data, attempting to log in...")
             new_cookie = await self.login_twitcasting()
             if not new_cookie:
                 raise RuntimeError("TwitCasting login failed, please check if the account and password in the "
                                    "configuration file are correct")
-            print("TwitCasting login successful! Starting to fetch data...")
+            # print("TwitCasting login successful! Starting to fetch data...")
             self.mobile_headers['Cookie'] = new_cookie
             anchor_name, live_status, live_title = await get_data()
 

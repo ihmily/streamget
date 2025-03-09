@@ -22,13 +22,16 @@ class DouyinUtils:
     }
 
     @staticmethod
-    async def get_xbogus(url: str, headers: dict | None = None) -> str:
+    async def get_xbogus(url: str, headers: dict | None = None) -> str | None:
         if not headers or 'user-agent' not in (k.lower() for k in headers):
             headers = DouyinUtils.HEADERS
         query = urllib.parse.urlparse(url).query
-        xbogus = execjs.compile(open(f'{JS_SCRIPT_PATH}/x-bogus.js').read()).call(
-            'sign', query, headers.get("User-Agent", "user-agent"))
-        return xbogus
+        try:
+            xbogus = execjs.compile(open(f'{JS_SCRIPT_PATH}/x-bogus.js').read()).call(
+                'sign', query, headers.get("User-Agent", "user-agent"))
+            return xbogus
+        except execjs.ProgramError:
+            raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
 
     @staticmethod
     async def get_sec_user_id(url: str, proxy_addr: str | None = None, headers: dict | None = None) -> tuple | None:
@@ -47,11 +50,11 @@ class DouyinUtils:
                         room_id = str(redirect_url).split('?')[0].rsplit('/', maxsplit=1)[1]
                         return room_id, sec_user_id
                     else:
-                        print("Could not find sec_user_id in the URL.")
+                        raise RuntimeError("Could not find sec_user_id in the URL.")
                 else:
-                    print("The redirect URL does not contain 'reflow/'.")
+                    raise RuntimeError("The redirect URL does not contain 'reflow/'.")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            raise RuntimeError(f"An error occurred: {e}")
         return None
 
     @staticmethod
@@ -73,11 +76,11 @@ class DouyinUtils:
                     unique_id = matches[-1]
                     return unique_id
                 else:
-                    print("Could not find unique_id in the response.")
-                    return None
+                    raise RuntimeError("Could not find unique_id in the response.")
+
         except Exception as e:
-            print(f"An error occurred: {e}")
-            return None
+            raise RuntimeError(f"An error occurred: {e}")
+        return None
 
     @staticmethod
     async def get_live_room_id(room_id: str, sec_user_id: str, proxy_addr: str | None = None,
@@ -94,8 +97,8 @@ class DouyinUtils:
                 "room_id": room_id,
                 "sec_user_id": sec_user_id,
                 "app_id": "1128",
-                "msToken": "wrqzbEaTlsxt52-vxyZo_mIoL0RjNi1ZdDe7gzEGMUTVh_HvmbLLkQrA_1HKVOa2C6gkxb6IiY6TY2z8enAkPEwGq--gM"
-                           "-me3Yudck2ailla5Q4osnYIHxd9dI4WtQ==",
+                "msToken": "wrqzbEaTlsxt52-vxyZo_mIoL0RjNi1ZdDe7gzEGMUTVh_HvmbLLkQrA_1HKVOa2C6gkxb6IiY6TY2z8enAkPEwGq--"
+                           "gM-me3Yudck2ailla5Q4osnYIHxd9dI4WtQ==",
             }
 
         api = f'https://webcast.amemv.com/webcast/room/reflow/info/?{urllib.parse.urlencode(params)}'
@@ -110,8 +113,6 @@ class DouyinUtils:
                 json_data = response.json()
                 return json_data['data']['room']['owner']['web_rid']
         except httpx.HTTPStatusError as e:
-            print(f"HTTP status error occurred: {e.response.status_code}")
-            raise
+            raise Exception(f"HTTP status error occurred: {e.response.status_code}")
         except Exception as e:
-            print(f"An exception occurred during get_live_room_id: {e}")
-            raise
+            raise Exception(f"An exception occurred during get_live_room_id: {e}")

@@ -35,8 +35,11 @@ class LiveMeLiveStream(BaseLiveStream):
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
         room_id = url.split("/index.html")[0].rsplit('/', maxsplit=1)[-1]
-        sign_data = execjs.compile(open(f'{JS_SCRIPT_PATH}/liveme.js').read()).call('sign', room_id,
-                                                                                    f'{JS_SCRIPT_PATH}/crypto-js.min.js')
+        try:
+            sign_data = execjs.compile(
+                open(f'{JS_SCRIPT_PATH}/liveme.js').read()).call('sign', room_id, f'{JS_SCRIPT_PATH}/crypto-js.min.js')
+        except execjs.ProgramError:
+            raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
         lm_s_sign = sign_data.pop("lm_s_sign")
         tongdun_black_box = sign_data.pop("tongdun_black_box")
         platform = sign_data.pop("os")
