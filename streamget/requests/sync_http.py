@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 import gzip
-import urllib.parse
-import urllib.error
-from urllib.request import Request
-import requests
-import ssl
 import json
+import ssl
+import urllib.error
+import urllib.parse
 import urllib.request
+
+import requests
 
 no_proxy_handler = urllib.request.ProxyHandler({})
 opener = urllib.request.build_opener(no_proxy_handler)
@@ -39,15 +38,19 @@ def sync_req(
         url (str): The URL to send the request to.
         proxy_addr (OptionalStr): The proxy address to use (e.g., "http://proxy.example.com"). Defaults to None.
         headers (OptionalDict): Custom headers to include in the request. Defaults to None.
-        data (dict | bytes | None): Data to send in the request body. If a dictionary, it will be URL-encoded. Defaults to None.
-        json_data (dict | list | None): JSON data to send in the request body. If provided, `data` will be ignored. Defaults to None.
+        data (dict | bytes | None): Data to send in the request body. If a dictionary, it will be URL-encoded.
+        Defaults to None.
+        json_data (dict | list | None): JSON data to send in the request body. If provided, `data` will be ignored.
+        Defaults to None.
         timeout (int): The request timeout in seconds. Defaults to 20.
         redirect_url (bool): If True, returns the final URL after redirects. Defaults to False.
-        abroad (bool): If True, uses the global `opener` with no proxy. Otherwise, uses `urllib.request.urlopen`. Defaults to False.
+        abroad (bool): If True, uses the global `opener` with no proxy. Otherwise, uses `urllib.request.urlopen`.
+        Defaults to False.
         content_conding (str): The encoding to use for request data and response decoding. Defaults to 'utf-8'.
 
     Returns:
-        str: The response text, or the final URL if `redirect_url` is True. If an error occurs, returns the error message as a string.
+        str: The response text, or the final URL if `redirect_url` is True. If an error occurs,
+        returns the error message as a string.
 
     Raises:
         Exception: If an error occurs during the request.

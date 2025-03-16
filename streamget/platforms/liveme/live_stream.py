@@ -1,10 +1,12 @@
 import json
-import execjs
 import urllib.parse
+
+import execjs
+
 from ... import JS_SCRIPT_PATH
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class LiveMeLiveStream(BaseLiveStream):
@@ -36,8 +38,9 @@ class LiveMeLiveStream(BaseLiveStream):
         """
         room_id = url.split("/index.html")[0].rsplit('/', maxsplit=1)[-1]
         try:
-            sign_data = execjs.compile(
-                open(f'{JS_SCRIPT_PATH}/liveme.js').read()).call('sign', room_id, f'{JS_SCRIPT_PATH}/crypto-js.min.js')
+            with open(f'{JS_SCRIPT_PATH}/liveme.js') as f:
+                js_code = f.read()
+            sign_data = execjs.compile(js_code).call('sign', room_id, f'{JS_SCRIPT_PATH}/crypto-js.min.js')
         except execjs.ProgramError:
             raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
         lm_s_sign = sign_data.pop("lm_s_sign")

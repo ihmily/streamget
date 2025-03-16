@@ -1,7 +1,9 @@
 import re
-import httpx
-import execjs
 import urllib.parse
+
+import execjs
+import httpx
+
 from ... import JS_SCRIPT_PATH, utils
 
 
@@ -27,8 +29,9 @@ class DouyinUtils:
             headers = DouyinUtils.HEADERS
         query = urllib.parse.urlparse(url).query
         try:
-            xbogus = execjs.compile(open(f'{JS_SCRIPT_PATH}/x-bogus.js').read()).call(
-                'sign', query, headers.get("User-Agent", "user-agent"))
+            with open(f'{JS_SCRIPT_PATH}/x-bogus.js') as f:
+                js_code = f.read()
+            xbogus = execjs.compile(js_code).call('sign', query, headers.get("User-Agent", "user-agent"))
             return xbogus
         except execjs.ProgramError:
             raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')

@@ -1,10 +1,11 @@
-import re
-import json
 import asyncio
+import json
+import re
 from operator import itemgetter
-from ..base import BaseLiveStream
+
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
-from ...data import wrap_stream, StreamData
+from ..base import BaseLiveStream
 
 
 class TikTokLiveStream(BaseLiveStream):

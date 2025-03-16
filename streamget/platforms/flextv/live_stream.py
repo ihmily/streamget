@@ -1,8 +1,9 @@
-import re
 import json
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+import re
+
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class FlexTVLiveStream(BaseLiveStream):
@@ -44,7 +45,8 @@ class FlexTVLiveStream(BaseLiveStream):
                 cookie_str = '; '.join([f"{k}={v}" for k, v in cookie_dict.items()])
                 return cookie_str
             else:
-                raise Exception("Please check if the FlexTV account and password in the configuration file are correct.")
+                raise Exception(
+                    "Please check if the FlexTV account and password in the configuration file are correct.")
 
         except Exception as e:
             raise Exception(f"FlexTV login request exception: {e}")

@@ -1,10 +1,12 @@
-import re
 import json
+import re
+
 import httpx
+
 from ... import utils
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class PopkonTVLiveStream(BaseLiveStream):
@@ -144,7 +146,7 @@ class PopkonTVLiveStream(BaseLiveStream):
                 raise RuntimeError(f"Failed to retrieve live room data because {anchor_name}'s room is a private room. "
                                    f"Please configure the room password and try again.")
 
-            async def fetch_data(code: str = None) -> str:
+            async def fetch_data(code: str | None = None) -> str:
                 data = {
                     'androidStore': 0,
                     'castCode': f'{mc_sign_id}-{cast_start_date_code}',

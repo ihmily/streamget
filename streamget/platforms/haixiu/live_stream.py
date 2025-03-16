@@ -1,11 +1,13 @@
 import json
 import time
-import execjs
 import urllib.parse
+
+import execjs
+
 from ... import JS_SCRIPT_PATH
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class HaixiuLiveStream(BaseLiveStream):
@@ -48,8 +50,9 @@ class HaixiuLiveStream(BaseLiveStream):
             "_st1": int(time.time() * 1000)
         }
         try:
-            ajax_data = execjs.compile(open(f'{JS_SCRIPT_PATH}/haixiu.js').read()).call(
-                'sign', params, f'{JS_SCRIPT_PATH}/crypto-js.min.js')
+            with open(f'{JS_SCRIPT_PATH}/haixiu.js') as f:
+                js_code = f.read()
+            ajax_data = execjs.compile(js_code).call('sign', params, f'{JS_SCRIPT_PATH}/crypto-js.min.js')
         except execjs.ProgramError:
             raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
 

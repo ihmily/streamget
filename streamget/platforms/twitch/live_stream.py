@@ -1,9 +1,10 @@
 import json
 import random
 import urllib.parse
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class TwitchLiveStream(BaseLiveStream):
@@ -72,10 +73,11 @@ class TwitchLiveStream(BaseLiveStream):
             "operationName": "PlaybackAccessToken_Template",
             "query": "query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, "
                      "$isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, "
-                     "params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include(if: "
-                     "$isLive) {    value    signature   authorization { isForbidden forbiddenReasonCode }   __typename  "
-                     "}  videoPlaybackAccessToken(id: $vodID, params: {platform: \"web\", playerBackend: \"mediaplayer\", "
-                     "playerType: $playerType}) @include(if: $isVod) {    value    signature   __typename  }}",
+                     "params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) "
+                     "@include(if: $isLive) {    value    signature   authorization { isForbidden forbiddenReasonCode }"
+                     "   __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: \"web\", "
+                     "playerBackend: \"mediaplayer\", playerType: $playerType}) @include(if: $isVod) {    value   "
+                     " signature   __typename  }}",
             "variables": {
                 "isLive": True,
                 "login": uid,

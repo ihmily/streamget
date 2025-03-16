@@ -1,5 +1,5 @@
-from ..base import BaseLiveStream
 from ...data import StreamData
+from ..base import BaseLiveStream
 from ..haixiu.live_stream import HaixiuLiveStream
 
 

@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
+from typing import Any
+
 import httpx
-from typing import Dict, Any
+
 from .. import utils
 
 OptionalStr = str | None
-OptionalDict = Dict[str, Any] | None
+OptionalDict = dict[str, Any] | None
 
 
 async def async_req(
@@ -74,7 +75,7 @@ async def async_req(
         if redirect_url:
             return str(response.url)
         elif return_cookies:
-            cookies_dict = {name: value for name, value in response.cookies.items()}
+            cookies_dict = dict(response.cookies.items())
             return response.text, cookies_dict if include_cookies else cookies_dict
         else:
             resp_str = response.text

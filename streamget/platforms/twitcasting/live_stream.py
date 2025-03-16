@@ -1,8 +1,9 @@
 import re
+
 from ... import utils
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class TwitCastingLiveStream(BaseLiveStream):

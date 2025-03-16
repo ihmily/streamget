@@ -6,7 +6,7 @@ authors = [{ name = "Hmily" }]
 license = {text = "MIT"}
 readme = "README.md"
 url='https://github.com/ihmily/streamget'
-keywords = ["live", "stream", "douyin", "youtube", "tiktok", "twitch", "recorder"]
+keywords = ["live", "stream"]
 requires-python = ">=3.10,<4.0"
 
 dependencies = [

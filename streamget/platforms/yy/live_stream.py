@@ -1,10 +1,11 @@
-import re
 import json
+import re
 import time
 import urllib.parse
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class YYLiveStream(BaseLiveStream):
@@ -37,7 +38,14 @@ class YYLiveStream(BaseLiveStream):
         anchor_name = re.search('nick: "(.*?)",\n\\s+logo', html_str).group(1)
         cid = re.search('sid : "(.*?)",\n\\s+ssid', html_str, re.DOTALL).group(1)
 
-        data = '{"head":{"seq":1701869217590,"appidstr":"0","bidstr":"121","cidstr":"' + cid + '","sidstr":"' + cid + '","uid64":0,"client_type":108,"client_ver":"5.17.0","stream_sys_ver":1,"app":"yylive_web","playersdk_ver":"5.17.0","thundersdk_ver":"0","streamsdk_ver":"5.17.0"},"client_attribute":{"client":"web","model":"web0","cpu":"","graphics_card":"","os":"chrome","osversion":"0","vsdk_version":"","app_identify":"","app_version":"","business":"","width":"1920","height":"1080","scale":"","client_type":8,"h265":0},"avp_parameter":{"version":1,"client_type":8,"service_type":0,"imsi":0,"send_time":1701869217,"line_seq":-1,"gear":4,"ssl":1,"stream_format":0}}'
+        data = ('{"head":{"seq":1701869217590,"appidstr":"0","bidstr":"121","cidstr":"' + cid + '","sidstr":"' + cid +
+                '","uid64":0,"client_type":108,"client_ver":"5.17.0","stream_sys_ver":1,"app":"yylive_web",'
+                '"playersdk_ver":"5.17.0","thundersdk_ver":"0","streamsdk_ver":"5.17.0"},'
+                '"client_attribute":{"client":"web","model":"web0","cpu":"","graphics_card":"",'
+                '"os":"chrome","osversion":"0","vsdk_version":"","app_identify":"","app_version":"",'
+                '"business":"","width":"1920","height":"1080","scale":"","client_type":8,"h265":0},'
+                '"avp_parameter":{"version":1,"client_type":8,"service_type":0,"imsi":0,"send_time":1701869217,'
+                '"line_seq":-1,"gear":4,"ssl":1,"stream_format":0}}')
         data_bytes = data.encode('utf-8')
         params = {
             "uid": "0",

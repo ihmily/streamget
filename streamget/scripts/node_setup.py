@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Author: Hmily
 GitHub:https://github.com/ihmily
@@ -7,16 +5,17 @@ Copyright (c) 2024 by Hmily, All Rights Reserved.
 """
 
 import os
+import platform
+import re
 import subprocess
 import sys
-import platform
 import zipfile
 from pathlib import Path
-import requests
-import re
+
 import distro
+import requests
+from loguru import logger
 from tqdm import tqdm
-from ..logger import logger
 
 current_platform = platform.system()
 execute_dir = os.path.split(os.path.realpath(sys.argv[0]))[0]
@@ -190,10 +189,7 @@ def ensure_nodejs_installed(func):
         return False
 
     def wrapped_func(*args, **kwargs):
-        if sys.version_info >= (3, 7):
-            res = wrapper(*args, **kwargs)
-        else:
-            res = wrapper(*args, **kwargs)
+        res = wrapper(*args, **kwargs)
         if not res:
             install_nodejs()
             res = wrapper(*args, **kwargs)

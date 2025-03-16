@@ -1,8 +1,9 @@
-import re
 import json
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+import re
+
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 from ..twitch.live_stream import TwitchLiveStream
 
 
@@ -25,7 +26,7 @@ class FaceitLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
-        nickname = re.findall(f'/players/(.*?)/stream', url)[0]
+        nickname = re.findall('/players/(.*?)/stream', url)[0]
         api = f'https://www.faceit.com/api/users/v1/nicknames/{nickname}'
         json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data = json.loads(json_str)

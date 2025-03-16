@@ -1,10 +1,11 @@
 import json
 import urllib.parse
-from ... import utils
 from operator import itemgetter
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+
+from ... import utils
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class AcfunLiveStream(BaseLiveStream):

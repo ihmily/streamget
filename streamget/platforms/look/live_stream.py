@@ -1,8 +1,9 @@
-import re
 import json
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+import re
+
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class LookLiveStream(BaseLiveStream):
@@ -34,11 +35,12 @@ class LookLiveStream(BaseLiveStream):
                   'cfe4875d3e82047b97ddef52741d546b8e289dc6935b3ece0462db0a22b8e7'
         nonce = b'0CoJUm6Qyw8W8jud'
         public_key = '010001'
-        from Crypto.Cipher import AES
-        from Crypto.Util.Padding import pad
         import base64
         import binascii
         import secrets
+
+        from Crypto.Cipher import AES
+        from Crypto.Util.Padding import pad
 
         def create_secret_key(size: int) -> bytes:
             charset = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:,.<>?'

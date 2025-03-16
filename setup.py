@@ -1,12 +1,14 @@
-# -*- coding: utf-8 -*-
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+
+with open('README.md', encoding='utf-8') as f:
+    readme = f.read()
 
 setup(
     name='streamget',
     version='4.0.3',
     author='Hmily',
     description='A Multi-Platform Live Stream Parser Library.',
-    long_description=open('README.md', encoding='utf-8').read(),
+    long_description=readme,
     long_description_content_type='text/markdown',
     url='https://github.com/ihmily/streamget',
     project_urls={

@@ -1,7 +1,8 @@
-import sys
 import argparse
 import platform
+import sys
 from pathlib import Path
+
 from .help import show_welcome_help
 from .scripts.node_installer import install_node
 

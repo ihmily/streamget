@@ -1,12 +1,13 @@
+import hashlib
+import json
 import re
 import time
-import json
+
 import execjs
-import hashlib
-from typing import List
-from ..base import BaseLiveStream
+
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
-from ...data import wrap_stream, StreamData
+from ..base import BaseLiveStream
 
 
 class DouyuLiveStream(BaseLiveStream):
@@ -29,7 +30,7 @@ class DouyuLiveStream(BaseLiveStream):
     def _get_md5(data) -> str:
         return hashlib.md5(data.encode('utf-8')).hexdigest()
 
-    async def _get_token_js(self, rid: str, did: str) -> List[str]:
+    async def _get_token_js(self, rid: str, did: str) -> list[str]:
         url = f'https://www.douyu.com/{rid}'
         html_str = await async_req(url=url, proxy_addr=self.proxy_addr)
         result = re.search(r'(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function', html_str).group(1)

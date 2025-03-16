@@ -1,12 +1,13 @@
 import re
 import time
-import execjs
 import urllib.parse
-from ... import utils
-from ... import JS_SCRIPT_PATH
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+
+import execjs
+
+from ... import JS_SCRIPT_PATH, utils
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class TaobaoLiveStream(BaseLiveStream):
@@ -66,7 +67,9 @@ class TaobaoLiveStream(BaseLiveStream):
             t13 = int(time.time() * 1000)
             pre_sign_str = f'{_m_h5_tk.split("_")[0]}&{t13}&{app_key}&' + params['data']
             try:
-                sign = execjs.compile(open(f'{JS_SCRIPT_PATH}/taobao-sign.js').read()).call('sign', pre_sign_str)
+                with open(f'{JS_SCRIPT_PATH}/taobao-sign.js') as f:
+                    js_code = f.read()
+                sign = execjs.compile(js_code).call('sign', pre_sign_str)
             except execjs.ProgramError:
                 raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
             params |= {'sign': sign, 't': t13}
@@ -104,5 +107,6 @@ class TaobaoLiveStream(BaseLiveStream):
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
         data = await self.get_stream_url(
-            json_data, video_quality, url_type='all', hls_extra_key='hlsUrl', flv_extra_key='flvUrl', platform='淘宝直播')
+            json_data, video_quality, url_type='all', hls_extra_key='hlsUrl',
+            flv_extra_key='flvUrl', platform='淘宝直播')
         return wrap_stream(data)

@@ -1,10 +1,11 @@
-import re
 import json
+import re
 import time
 import urllib.parse
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class HuajiaoLiveStream(BaseLiveStream):

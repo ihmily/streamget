@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://streamget.readthedocs.io"><img width="350" height="208" src="https://raw.githubusercontent.com/ihmily/streamget/main/docs/img/eagle.png" alt='StreamGet'></a>
+  <a href="https://streamget.readthedocs.io"><img width="350" height="208" src="./docs/img/eagle.png" alt='StreamGet'></a>
 </p>
 <p align="center"><strong>StreamGet</strong> <em>- A Multi-Platform Live Stream Parser Library.</em></p>
 

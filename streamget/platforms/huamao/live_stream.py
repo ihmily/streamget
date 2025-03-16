@@ -1,5 +1,5 @@
-from ..base import BaseLiveStream
 from ...data import StreamData
+from ..base import BaseLiveStream
 from ..piaopiao.live_stream import PiaopaioLiveStream
 
 

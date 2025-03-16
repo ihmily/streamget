@@ -1,10 +1,10 @@
-import re
 import json
-from typing import List
+import re
 import urllib.parse
-from ..base import BaseLiveStream
-from ...data import wrap_stream, StreamData
+
+from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ..base import BaseLiveStream
 
 
 class SoopLiveStream(BaseLiveStream):
@@ -138,7 +138,7 @@ class SoopLiveStream(BaseLiveStream):
 
         result = {"anchor_name": anchor_name or '', "is_live": False}
 
-        async def get_url_list(m3u8: str) -> List[str]:
+        async def get_url_list(m3u8: str) -> list[str]:
             resp = await async_req(url=m3u8, proxy_addr=self.proxy_addr, headers=self.pc_headers)
             play_url_list = []
             url_prefix = m3u8.rsplit('/', maxsplit=1)[0] + '/'
@@ -191,7 +191,7 @@ class SoopLiveStream(BaseLiveStream):
                 else:
                     raise RuntimeError("sooplive login failed, please check if the account and password are correct")
             elif json_data['data']['code'] == -6001:
-                raise Exception(f"error message：Please check if the input sooplive live room address is correct.")
+                raise Exception("error message：Please check if the input sooplive live room address is correct.")
 
         if json_data['result'] == 1 and anchor_name:
             broad_no = json_data['data']['broad_no']

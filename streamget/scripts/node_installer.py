@@ -1,8 +1,9 @@
+import platform
 import sys
 import tarfile
 import zipfile
-import platform
 from pathlib import Path
+
 import httpx
 from tqdm import tqdm
 

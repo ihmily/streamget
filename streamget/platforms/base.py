@@ -1,6 +1,6 @@
 import re
 import urllib.parse
-from typing import List
+
 from ..requests.async_http import async_req
 
 
@@ -103,7 +103,7 @@ class BaseLiveStream:
             return query_params[params][0]
 
     async def get_stream_url(self, json_data: dict, video_quality: str, url_type: str = 'm3u8', spec: bool = False,
-                             hls_extra_key: str | int = None, flv_extra_key: str | int = None,
+                             hls_extra_key: str | int | None = None, flv_extra_key: str | int | None = None,
                              platform: str | None = None) -> dict:
         """
         Fetches the stream URL based on the provided data and quality.
@@ -149,7 +149,7 @@ class BaseLiveStream:
         return data
 
     @staticmethod
-    async def get_play_url_list(m3u8: str, proxy: str | None = None, headers: dict | None = None) -> List[str]:
+    async def get_play_url_list(m3u8: str, proxy: str | None = None, headers: dict | None = None) -> list[str]:
         """
         Fetches a list of play URLs from an M3U8 file.
 
