@@ -92,7 +92,7 @@ async def get_response_status(
         timeout: int = 10,
         verify: bool = False,
         http2: bool = True
-) -> bool:
+) -> int:
     """
     Checks if a URL returns a successful HTTP status code (200 OK).
 
@@ -108,7 +108,7 @@ async def get_response_status(
         http2 (bool): If True, enables HTTP/2 support. Defaults to True.
 
     Returns:
-        bool: True if the response status code is 200 OK, otherwise False.
+        int: such as 200, 304, 403.
 
     Raises:
         Exception: If an error occurs during the request.
@@ -119,17 +119,17 @@ async def get_response_status(
         ...     status = await get_response_status("https://example.com")
         ...     print(status)
         >>> asyncio.run(main())
-        True or False
+        200
 
     Note:
         - This function uses the HEAD request method, which is lightweight and suitable for checking status codes.
-        - If the URL returns a status code other than 200 OK, the function returns False.
+        - returns a status code other than 200 OK.
     """
     try:
         proxy_addr = utils.handle_proxy_addr(proxy_addr)
         async with httpx.AsyncClient(proxy=proxy_addr, timeout=timeout, verify=verify, http2=http2) as client:
             response = await client.head(url, headers=headers, follow_redirects=True)
-            return response.status_code == 200
+            return response.status_code
     except Exception as e:
         print(e)
     return False

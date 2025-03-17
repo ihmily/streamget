@@ -73,16 +73,21 @@ class HuyaLiveStream(BaseLiveStream):
             'showSecret': '1',
         }
         wx_app_api = f'https://mp.huya.com/cache.php?{urllib.parse.urlencode(params)}'
-        json_str = await async_req(url=wx_app_api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+        json_str = await async_req(url=wx_app_api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data = json.loads(json_str)
+
         if not process_data:
             return json_data
         anchor_name = json_data['data']['profileInfo']['nick']
         live_status = json_data['data']['realLiveStatus']
-        live_title = json_data['data']['liveData']['introduction']
         if live_status != 'ON':
             return {'anchor_name': anchor_name, 'is_live': False}
         else:
+            live_title = json_data['data']['liveData']['introduction']
+            live_type = json_data['data']['liveData']["gameHostName"]
+            if live_type in ['lol']:
+                return await self.fetch_web_stream_data(url)
+
             base_steam_info_list = json_data['data']['stream']['baseSteamInfoList']
             play_url_list = []
             for i in base_steam_info_list:
@@ -101,15 +106,28 @@ class HuyaLiveStream(BaseLiveStream):
                         'flv_url': flv_url,
                     }
                 )
-            flv_url = 'https://' + play_url_list[0]['flv_url'].split('://')[1]
-            record_url = flv_url
+
+            # mStreamRatioWeb = json.loads(json_data['data']['liveData']['mStreamRatioWeb'])
+            # highest_priority_key = max(mStreamRatioWeb, key=lambda k: mStreamRatioWeb[k])
+
+            select_item = None
+            for item in play_url_list:
+                if item["cdn_type"] == "TX":
+                    select_item = item
+
+            select_item = select_item or play_url_list[0]
+            m3u8_url = select_item.get("m3u8_url")
+            flv_url = select_item.get("flv_url")
+            if select_item["cdn_type"] in ["TX", "HW"]:
+                flv_url = flv_url.replace("&ctype=tars_mp", "&ctype=huya_webh5").replace("&fs=bhct", "&fs=bgct")
+                m3u8_url = m3u8_url.replace("&ctype=tars_mp", "&ctype=huya_webh5").replace("&fs=bhct", "&fs=bgct")
 
             return {
                 'anchor_name': anchor_name,
                 'is_live': True,
-                'm3u8_url': play_url_list[0]['m3u8_url'],
-                'flv_url': play_url_list[0]['flv_url'],
-                'record_url': record_url,
+                'm3u8_url': m3u8_url,
+                'flv_url': flv_url,
+                'record_url': flv_url or m3u8_url,
                 'title': live_title
             }
 
