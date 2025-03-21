@@ -137,7 +137,7 @@ class HuyaLiveStream(BaseLiveStream):
          Fetches the stream URL for a live room and wraps it into a StreamData object.
          """
         platform = "虎牙直播"
-        if 'record_url' in json_data:
+        if 'is_live' in json_data:
             json_data |= {"platform": platform}
             return wrap_stream(json_data)
         game_live_info = json_data['data'][0]['gameLiveInfo']
