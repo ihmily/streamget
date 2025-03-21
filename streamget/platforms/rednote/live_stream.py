@@ -43,7 +43,7 @@ class RedNoteLiveStream(BaseLiveStream):
         match_data = re.search("<script>window.__INITIAL_STATE__=(.*?)</script>", html_str)
 
         if match_data:
-            json_str = match_data.group(1)
+            json_str = match_data.group(1).replace("undefined", "null")
             json_data = json.loads(json_str)
             if not process_data:
                 return json_data
