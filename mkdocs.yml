@@ -1,0 +1,41 @@
+site_name: StreamGet
+site_description: A Multi-Platform Live Stream Parser Library for Python.
+site_url: https://streamget.readthedocs.io/
+
+theme:
+    name: 'material'
+    custom_dir: 'docs/overrides'
+    palette:
+      - scheme: 'default'
+        media: '(prefers-color-scheme: light)'
+        toggle:
+          icon: 'material/lightbulb'
+          name: "Switch to dark mode"
+      - scheme: 'slate'
+        media: '(prefers-color-scheme: dark)'
+        primary: 'blue'
+        toggle:
+          icon: 'material/lightbulb-outline'
+          name: 'Switch to light mode'
+
+repo_name: ihmily/streamget
+repo_url: https://github.com/ihmily/streamget/
+edit_uri: ""
+
+nav:
+    - Introduction: 'index.md'
+    - QuickStart: 'quickstart.md'
+    - Guides:
+        - Parameter Parsing: 'guide.md'
+    - Community:
+        - Third Party Packages: 'third_party_packages.md'
+        - Code of Conduct: 'code_of_conduct.md'
+
+markdown_extensions:
+  - admonition
+  - codehilite:
+      css_class: highlight
+  - mkautodoc
+
+extra_css:
+    - css/custom.css
