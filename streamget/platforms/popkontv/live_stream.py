@@ -23,14 +23,24 @@ class PopkonTVLiveStream(BaseLiveStream):
         self.pc_headers = self._get_pc_headers()
 
     def _get_pc_headers(self) -> dict:
+
+        client_key_list = {
+            "Android": "Client CuVQOGkDWRCVoXyihBzAKdB91Y6zzA/FG+f+BhhYNweNnikvKKnam63aHinBb+Gk",
+            "IOS": "Client qHeJyievkdcExwKzYkXutZ4wSgXfLuLppECpHrh4CRUTPNtMwqSsssPopx0k1pKi",
+            "PW": "Client FpAhe6mh8Qtz116OENBmRddbYVirNKasktdXQiuHfm88zRaFydTsFy63tzkdZY0u",
+            "MW": "Client J50A6F+Mi3GHv+bGEsFtvfhqFpFlg2EEQBLW9qDxwG8GgKLN4t5GqHHSIdWI6rZj"
+        }
+
         return {
+            'cookie': self.cookies or '',
             'accept': 'application/json, text/plain, */*',
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
-            'clientKey': 'Client FpAhe6mh8Qtz116OENBmRddbYVirNKasktdXQiuHfm88zRaFydTsFy63tzkdZY0u',
+            'clientKey': client_key_list["PW"],
+            'connection': 'keep-alive',
             'content-type': 'application/json',
             'origin': 'https://www.popkontv.com',
+            'referer': 'https://www.popkontv.com/live/view?castId=owl2205&partnerCode=P-00117',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
-            'cookie': self.cookies or '',
         }
 
     async def _get_room_info(self, url: str) -> tuple:
@@ -147,7 +157,7 @@ class PopkonTVLiveStream(BaseLiveStream):
                                    f"Please configure the room password and try again.")
 
             async def fetch_data(code: str | None = None) -> str:
-                data = {
+                _json_data = {
                     'androidStore': 0,
                     'castCode': f'{mc_sign_id}-{cast_start_date_code}',
                     'castPartnerCode': cast_partner_code,
@@ -161,8 +171,9 @@ class PopkonTVLiveStream(BaseLiveStream):
                     'signId': self.username,
                     'version': '4.6.2',
                 }
-                play_api = 'https://www.popkontv.com/api/proxy/broadcast/v1/castwatchonoff'
-                return await async_req(play_api, proxy_addr=self.proxy_addr, json_data=data)
+                play_api = 'https://www.popkontv.com/api/proxy/broadcast/v1/castwatchonoffguest'
+                return await async_req(
+                    play_api, proxy_addr=self.proxy_addr, json_data=_json_data, headers=self.pc_headers)
 
             json_str = await fetch_data(self.partner_code)
 
