@@ -1,4 +1,4 @@
-# Guide
+# Parameter Parsing
 
 ## Overview
 
@@ -65,7 +65,7 @@ The `fetch_stream_url` method is used to fetch the streaming URL from the proces
 ### Parameters
 
 - **data**: The processed data returned by `fetch_web_stream_data`.
-- **video_quality**: The desired video quality of the stream (e.g., "OD" for original definition).
+- **video_quality**: The desired video quality of the stream (e.g., "OD" for original definition). please refer to the [Video Quality Options](https://streamget.readthedocs.io/video_quality_options/).
 
 ### Return Value
 
@@ -136,6 +136,8 @@ For platforms that require proxy access, you can pass a proxy URL during object 
 >>> proxy = "http://127.0.0.1:7890"
 >>> live = DouyinLiveStream(proxy=proxy)
 ```
+
+
 
 ## Troubleshooting
 

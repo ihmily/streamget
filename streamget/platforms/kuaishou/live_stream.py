@@ -60,7 +60,7 @@ class KwaiLiveStream(BaseLiveStream):
 
         return result
 
-    async def fetch_stream_url(self, json_data: dict, video_quality: str = 'OD') -> StreamData:
+    async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
@@ -77,45 +77,39 @@ class KwaiLiveStream(BaseLiveStream):
         }
 
         if live_status:
+
             quality_mapping_bit = {'OD': 99999, 'BD': 4000, 'UHD': 2000, 'HD': 1000, 'SD': 800, 'LD': 600}
-            QUALITY_MAPPING = {"OD": 0, "BD": 0, "UHD": 1, "HD": 2, "SD": 3, "LD": 4}
-            if video_quality in QUALITY_MAPPING:
+            video_quality, quality_index = self.get_quality_index(video_quality)
 
-                quality, quality_index = self.get_quality_index(video_quality)
-                if 'm3u8_url_list' in json_data:
-                    m3u8_url_list = json_data['m3u8_url_list'][::-1]
-                    while len(m3u8_url_list) < 5:
-                        m3u8_url_list.append(m3u8_url_list[-1])
-                    m3u8_url = m3u8_url_list[quality_index]['url']
-                    result['m3u8_url'] = m3u8_url
+            if 'm3u8_url_list' in json_data:
+                m3u8_url_list = json_data['m3u8_url_list'][::-1]
+                while len(m3u8_url_list) < 5:
+                    m3u8_url_list.append(m3u8_url_list[-1])
+                m3u8_url = m3u8_url_list[quality_index]['url']
+                result['m3u8_url'] = m3u8_url
 
-                if 'flv_url_list' in json_data:
-                    if 'bitrate' in json_data['flv_url_list'][0]:
-                        flv_url_list = json_data['flv_url_list']
-                        flv_url_list = sorted(flv_url_list, key=lambda x: x['bitrate'], reverse=True)
-                        quality_str = str(video_quality).upper()
-                        if quality_str.isdigit():
-                            video_quality, quality_index_bitrate_value = list(quality_mapping_bit.items())[
-                                int(quality_str)]
-                        else:
-                            quality_index_bitrate_value = quality_mapping_bit.get(quality_str, 99999)
-                            video_quality = quality_str
-                        quality_index = next(
-                            (i for i, x in enumerate(flv_url_list) if x['bitrate'] <= quality_index_bitrate_value),
-                            None)
-                        if quality_index is None:
-                            quality_index = len(flv_url_list) - 1
-                        flv_url = flv_url_list[quality_index]['url']
+            if 'flv_url_list' in json_data:
+                if 'bitrate' in json_data['flv_url_list'][0]:
+                    flv_url_list = json_data['flv_url_list']
+                    flv_url_list = sorted(flv_url_list, key=lambda x: x['bitrate'], reverse=True)
 
-                        result['flv_url'] = flv_url
-                        result['record_url'] = flv_url
-                    else:
-                        flv_url_list = json_data['flv_url_list'][::-1]
-                        while len(flv_url_list) < 5:
-                            flv_url_list.append(flv_url_list[-1])
-                        flv_url = flv_url_list[quality_index]['url']
-                        result |= {'flv_url': flv_url, 'record_url': flv_url}
-                result['is_live'] = True
-                result['quality'] = video_quality
+                    quality_index_bitrate_value = quality_mapping_bit.get(video_quality, 99999)
+                    quality_index = next(
+                        (i for i, x in enumerate(flv_url_list) if x['bitrate'] <= quality_index_bitrate_value),
+                        None)
+                    if quality_index is None:
+                        quality_index = len(flv_url_list) - 1
+                    flv_url = flv_url_list[quality_index]['url']
+
+                    result['flv_url'] = flv_url
+                    result['record_url'] = flv_url
+                else:
+                    flv_url_list = json_data['flv_url_list'][::-1]
+                    while len(flv_url_list) < 5:
+                        flv_url_list.append(flv_url_list[-1])
+                    flv_url = flv_url_list[quality_index]['url']
+                    result |= {'flv_url': flv_url, 'record_url': flv_url}
+            result['is_live'] = True
+            result['quality'] = video_quality
         return wrap_stream(result)
 

@@ -48,7 +48,7 @@ class BaseLiveStream:
         }
 
     @staticmethod
-    def get_quality_index(quality) -> tuple:
+    def get_quality_index(quality: str | int | None = None) -> tuple:
         """
         Maps a quality string to its corresponding index.
 
@@ -65,8 +65,7 @@ class BaseLiveStream:
 
         quality_str = str(quality).upper()
         if quality_str.isdigit():
-            quality_int = int(quality_str[0])
-            quality_str = list(QUALITY_MAPPING.keys())[quality_int]
+            quality_str = list(QUALITY_MAPPING.keys())[int(quality_str)]
         return quality_str, QUALITY_MAPPING.get(quality_str, 0)
 
     @staticmethod

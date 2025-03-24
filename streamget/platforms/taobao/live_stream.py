@@ -102,7 +102,7 @@ class TaobaoLiveStream(BaseLiveStream):
             else:
                 raise Exception(f'Error: Taobao live data fetch failed, {ret_msg[0]}')
 
-    async def fetch_stream_url(self, json_data: dict, video_quality: str = 'OD') -> StreamData:
+    async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """

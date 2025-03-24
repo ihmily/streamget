@@ -26,7 +26,8 @@ nav:
     - Introduction: 'index.md'
     - QuickStart: 'quickstart.md'
     - Guides:
-        - Parameter Parsing: 'guide.md'
+        - Parameter Parsing: 'parameter_parsing.md'
+        - Video Quality Options: 'video_quality_options.md'
     - Community:
         - Third Party Packages: 'third_party_packages.md'
         - Code of Conduct: 'code_of_conduct.md'
@@ -36,6 +37,3 @@ markdown_extensions:
   - codehilite:
       css_class: highlight
   - mkautodoc
-
-extra_css:
-    - css/custom.css

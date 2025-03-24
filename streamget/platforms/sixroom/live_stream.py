@@ -61,7 +61,7 @@ class SixRoomLiveStream(BaseLiveStream):
         return result
 
     @staticmethod
-    async def fetch_stream_url(json_data: dict, video_quality: str = 'OD') -> StreamData:
+    async def fetch_stream_url(json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """

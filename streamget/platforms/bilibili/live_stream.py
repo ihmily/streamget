@@ -126,7 +126,7 @@ class BilibiliLiveStream(BaseLiveStream):
             print(e)
             return {"anchor_name": '', "live_status": False, "room_url": url}
 
-    async def fetch_stream_url(self, json_data: dict, video_quality: str = 'OD') -> StreamData:
+    async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
 
@@ -150,7 +150,15 @@ class BilibiliLiveStream(BaseLiveStream):
             "LD": '80'
         }
 
-        select_quality = video_quality_options[video_quality]
+        if not video_quality:
+            video_quality = "OD"
+        else:
+            if str(video_quality).isdigit():
+                video_quality = list(video_quality_options.keys())[int(video_quality)]
+            else:
+                video_quality = video_quality.upper()
+
+        select_quality = video_quality_options.get(video_quality, '10000')
         play_url = await self.get_bilibili_stream_data(
             room_url, qn=select_quality, platform='web')
         data = {

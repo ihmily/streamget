@@ -132,7 +132,7 @@ class HuyaLiveStream(BaseLiveStream):
             }
 
     @staticmethod
-    async def fetch_stream_url(json_data: dict, video_quality: str = 'OD') -> StreamData:
+    async def fetch_stream_url(json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
          Fetches the stream URL for a live room and wraps it into a StreamData object.
          """
@@ -202,6 +202,16 @@ class HuyaLiveStream(BaseLiveStream):
             m3u8_url = f'{hls_url}/{stream_name}.{hls_url_suffix}?{new_anti_code}&ratio='
 
             quality_list = flv_anti_code.split('&exsphd=')
+
+            if not video_quality:
+                video_quality = "OD"
+            else:
+                if str(video_quality).isdigit():
+                    video_quality_keys = ["OD", "BD", "UHD", "HD", "SD", "LD"]
+                    video_quality = video_quality_keys[int(video_quality)]
+                else:
+                    video_quality = video_quality.upper()
+
             if len(quality_list) > 1 and video_quality not in ["OD", "BD"]:
                 pattern = r"(?<=264_)\d+"
                 quality_list = list(re.findall(pattern, quality_list[1]))[::-1]

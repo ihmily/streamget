@@ -51,6 +51,6 @@ class ChzzkLiveStream(BaseLiveStream):
             result |= {"is_live": True, "m3u8_url": m3u8_url, "play_url_list": m3u8_url_list}
         return result
 
-    async def fetch_stream_url(self, json_data: dict, video_quality: str = 'OD') -> StreamData:
+    async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         data = await self.get_stream_url(json_data, video_quality, spec=True, platform='CHZZK')
         return wrap_stream(data)

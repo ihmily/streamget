@@ -111,7 +111,7 @@ class DouyuLiveStream(BaseLiveStream):
             result["room_id"] = json_data['room']['room_id']
         return result
 
-    async def fetch_stream_url(self, json_data: dict, video_quality: str = 'OD') -> StreamData:
+    async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
@@ -129,6 +129,15 @@ class DouyuLiveStream(BaseLiveStream):
         }
         rid = str(json_data["room_id"])
         json_data.pop("room_id")
+
+        if not video_quality:
+            video_quality = "OD"
+        else:
+            if str(video_quality).isdigit():
+                video_quality = list(video_quality_options.keys())[int(video_quality)]
+            else:
+                video_quality = video_quality.upper()
+
         rate = video_quality_options.get(video_quality, '0')
         flv_data = await self._fetch_web_stream_url(rid=rid, rate=rate)
         rtmp_url = flv_data['data'].get('rtmp_url')

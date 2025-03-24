@@ -124,7 +124,7 @@ class TwitchLiveStream(BaseLiveStream):
             result |= {'m3u8_url': m3u8_url, 'play_url_list': play_url_list}
         return result
 
-    async def fetch_stream_url(self, json_data: dict, video_quality: str = 'OD') -> StreamData:
+    async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
