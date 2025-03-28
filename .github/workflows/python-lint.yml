@@ -36,5 +36,5 @@ jobs:
           pip install ruff
 
       - name: Run ruff lint check
-        run: ruff check . --config .ruff.toml --exclude="*.md,*.txt"
+        run: ruff check streamget --config .ruff.toml
         working-directory: .
