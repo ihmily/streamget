@@ -4,10 +4,19 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'streamget/**'
+      - 'requirements.txt'
+      - '.ruff.toml'
+
   pull_request:
     types:
       - opened
       - synchronize
+    paths:
+      - 'streamget/**'
+      - 'requirements.txt'
+      - '.ruff.toml'
 
 jobs:
   lint-python:
