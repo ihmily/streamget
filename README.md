@@ -16,7 +16,7 @@
 Install `StreamGet` via pip (requires Python 3.10+):
 
 ```bash
-pip install streamget
+pip install -i https://pypi.org/simple streamget
 ```
 
 Node.js Runtime (Optional for Some Features):
