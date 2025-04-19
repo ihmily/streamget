@@ -39,11 +39,12 @@ class FlexTVLiveStream(BaseLiveStream):
         url = 'https://api.flextv.co.kr/v2/api/auth/signin'
 
         try:
-            cookie_dict = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers, json_data=data,
-                                          return_cookies=True, timeout=20)
+            _, cookie_dict = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers,
+                                             json_data=data, return_cookies=True, timeout=20)
             if cookie_dict and 'flx_oauth_access' in cookie_dict:
-                cookie_str = '; '.join([f"{k}={v}" for k, v in cookie_dict.items()])
-                return cookie_str
+                self.cookies = '; '.join([f"{k}={v}" for k, v in cookie_dict.items()])
+                self.pc_headers['cookie'] = self.cookies
+                return self.cookies
             else:
                 raise Exception(
                     "Please check if the FlexTV account and password in the configuration file are correct.")
@@ -132,3 +133,4 @@ class FlexTVLiveStream(BaseLiveStream):
         """
         data = await self.get_stream_url(json_data, video_quality, spec=True, platform='FlexTV')
         return wrap_stream(data)
+    

@@ -47,11 +47,13 @@ class TwitCastingLiveStream(BaseLiveStream):
             'cs_session_id': cs_session_id,
         }
         try:
-            cookie_dict = await async_req(login_api, proxy_addr=self.proxy_addr, headers=self.mobile_headers,
-                                          json_data=data, return_cookies=True, timeout=20)
+            _, cookie_dict = await async_req(
+                login_api, proxy_addr=self.proxy_addr, headers=self.mobile_headers,
+                json_data=data, return_cookies=True, timeout=20)
             if 'tc_ss' in cookie_dict:
-                cookie = utils.dict_to_cookie_str(cookie_dict)
-                return cookie
+                self.cookies = utils.dict_to_cookie_str(cookie_dict)
+                self.mobile_headers['cookie'] = self.cookies
+                return self.cookies
         except Exception as e:
             raise Exception("TwitCasting login error,", e)
 

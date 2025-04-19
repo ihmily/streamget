@@ -34,6 +34,7 @@ class PopkonTVLiveStream(BaseLiveStream):
         return {
             'cookie': self.cookies or '',
             'accept': 'application/json, text/plain, */*',
+            'authorization': f'Bearer {self.access_token}',
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
             'clientKey': client_key_list["PW"],
             'connection': 'keep-alive',
@@ -187,7 +188,7 @@ class PopkonTVLiveStream(BaseLiveStream):
                 if new_access_token and len(new_access_token) == 640:
                     # print("Logged into popkontv platform successfully! Starting to fetch live streaming data...")
                     self.pc_headers['Authorization'] = f'Bearer {new_access_token}'
-                    new_token = f'Bearer {new_access_token}'
+                    self.access_token = new_access_token
                     json_str = await fetch_data(new_partner_code)
                 else:
                     raise RuntimeError("popkontv login failed, please check if the account and password are correct")

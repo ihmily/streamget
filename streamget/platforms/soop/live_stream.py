@@ -46,10 +46,11 @@ class SoopLiveStream(BaseLiveStream):
         url = 'https://login.sooplive.co.kr/app/LoginAction.php'
 
         try:
-            cookie_dict = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers,
+            _, cookie_dict = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers,
                                           data=data, return_cookies=True, timeout=20)
-            cookie_str = '; '.join([f"{k}={v}" for k, v in cookie_dict.items()])
-            return cookie_str
+            self.cookies = '; '.join([f"{k}={v}" for k, v in cookie_dict.items()])
+            self.pc_headers['cookie'] = self.cookies
+            return self.cookies
         except Exception as e:
             raise Exception(
                 f"sooplive login failed, please check if the account password in the configuration file is correct. {e}"
@@ -209,7 +210,3 @@ class SoopLiveStream(BaseLiveStream):
         """
         data = await self.get_stream_url(json_data, video_quality, platform='SOOP')
         return wrap_stream(data)
-
-
-
-
