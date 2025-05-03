@@ -108,9 +108,8 @@ class TwitCastingLiveStream(BaseLiveStream):
             response = Twitcasting_str.json()
             if response:
                 play_url = response.get('tc-hls', {}).get('streams', {}).get('high') or response.get('tc-hls', {}).get('streams', {}).get('medium') or response.get('tc-hls', {}).get('streams', {}).get('low')
-                if not m3u8_url:
-                    raise RuntimeError("No m3u8 url")
-                    play_url = f'https://twitcasting.tv/{anchor_id}/metastream.m3u8/?video=1&mode=source'
+                if not play_url:
+                    raise RuntimeError("No m3u8_url,please check the url")                  
             result |= {'title': live_title, 'is_live': True, "m3u8_url": play_url, "record_url": play_url}
         result['new_cookies'] = new_cookie
         return result
