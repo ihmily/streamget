@@ -87,11 +87,11 @@ class TaobaoLiveStream(BaseLiveStream):
                 if live_status == '1':
                     live_title = json_data['data']['title']
                     play_url_list = json_data['data']['liveUrlList']
-                    definition_priority = {
-                        "lld": 0, "ld": 1, "md": 2, "hd": 3, "ud": 4
-                    }
-
+                    
                     def get_sort_key(item):
+                        definition_priority = {
+                            "lld": 0, "ld": 1, "md": 2, "hd": 3, "ud": 4
+                        }
                         def_value = item.get('definition') or item.get('newDefinition')
                         priority = definition_priority.get(def_value, -1)
                         return priority
