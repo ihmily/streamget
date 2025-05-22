@@ -1,3 +1,4 @@
+import json
 import re
 
 from ... import utils
@@ -103,15 +104,23 @@ class TwitCastingLiveStream(BaseLiveStream):
 
         result["anchor_name"] = anchor_name
         if live_status == 'true':
-            play_url = f'https://twitcasting.tv/{anchor_id}/metastream.m3u8/?video=1&mode=source'
-            result |= {'title': live_title, 'is_live': True, "m3u8_url": play_url, "record_url": play_url}
+            url_streamserver = f"https://twitcasting.tv/streamserver.php?target={anchor_id}&mode=client&player=pc_web"
+            Twitcasting_str = await async_req(url_streamserver, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+            json_data = json.loads(Twitcasting_str)
+            if not json_data.get('tc-hls') or not json_data['tc-hls'].get("streams"):
+                raise RuntimeError("No m3u8_url,please check the url")
+
+            stream_dict = json_data['tc-hls']["streams"]
+            quality_order = {"high": 0, "medium": 1, "low": 2}
+            sorted_streams = sorted(stream_dict.items(), key=lambda item: quality_order[item[0]])
+            play_url_list = [url for quality, url in sorted_streams]
+            result |= {'title': live_title, 'is_live': True, "play_url_list": play_url_list}
         result['new_cookies'] = new_cookie
         return result
 
-    @staticmethod
-    async def fetch_stream_url(json_data: dict, video_quality: str | int | None = None) -> StreamData:
+    async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
-        json_data |= {"platform": "TwitCasting"}
-        return wrap_stream(json_data)
+        data = await self.get_stream_url(json_data, video_quality, spec=False, platform='TwitCasting')
+        return wrap_stream(data)
