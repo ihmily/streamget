@@ -5,7 +5,7 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
     name='streamget',
-    version='4.0.3',
+    version='4.0.4',
     author='Hmily',
     description='A Multi-Platform Live Stream Parser Library.',
     long_description=readme,
