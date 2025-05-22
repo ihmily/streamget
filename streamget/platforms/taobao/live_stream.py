@@ -87,17 +87,18 @@ class TaobaoLiveStream(BaseLiveStream):
                 if live_status == '1':
                     live_title = json_data['data']['title']
                     play_url_list = json_data['data']['liveUrlList']
-                    play_url_list = sorted(play_url_list, key=lambda x: int(x['codeLevel']), reverse=True)
+                    definition_priority = {
+                        "lld": 0, "ld": 1, "md": 2, "hd": 3, "ud": 4
+                    }
+
+                    def get_sort_key(item):
+                        def_value = item.get('definition') or item.get('newDefinition')
+                        priority = definition_priority.get(def_value, -1)
+                        return priority
+
+                    play_url_list = sorted(play_url_list, key=get_sort_key, reverse=True)
                     result |= {"is_live": True, "title": live_title, "play_url_list": play_url_list, 'live_id': live_id}
 
-                if '_m_h5_tk' in new_cookie and '_m_h5_tk_enc' in new_cookie:
-                    self.pc_headers['cookie'] = re.sub('_m_h5_tk=(.*?);', new_cookie['_m_h5_tk'],
-                                                       self.pc_headers['cookie'])
-                    self.pc_headers['cookie'] = re.sub('_m_h5_tk_enc=(.*?);', new_cookie['_m_h5_tk_enc'],
-                                                       self.pc_headers['cookie'])
-                else:
-                    raise Exception(
-                        'Error: Try to update cookie failed, please update the cookies in the configuration file')
                 return result
             else:
                 raise Exception(f'Error: Taobao live data fetch failed, {ret_msg[0]}')

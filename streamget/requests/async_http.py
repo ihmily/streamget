@@ -76,7 +76,7 @@ async def async_req(
             return str(response.url)
         elif return_cookies:
             cookies_dict = dict(response.cookies.items())
-            return response.text, cookies_dict if include_cookies else cookies_dict
+            return (response.text, cookies_dict) if include_cookies else cookies_dict
         else:
             resp_str = response.text
     except Exception as e:

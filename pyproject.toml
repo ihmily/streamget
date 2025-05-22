@@ -1,6 +1,6 @@
 [project]
 name = "streamget"
-version = "4.0.4"
+version = "4.0.5"
 description = "A Multi-Platform Live Stream Parser Library."
 authors = [{ name = "Hmily" }]
 license = {text = "MIT"}
