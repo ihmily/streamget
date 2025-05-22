@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
-## 4.0.4 (22nd May, 2025)
+## 4.0.5 (22nd May, 2025)
 
 ### Fixed
 
-Fix Blued live stream URL fetch.
+Fix blued and taobao live stream URL fetch.
