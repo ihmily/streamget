@@ -43,7 +43,7 @@ class MaoerLiveStream(BaseLiveStream):
             flv_url = stream_list['flv_pull_url']
             title = json_data['info']['room']['name']
             result |= {'is_live': True, 'title': title, 'm3u8_url': m3u8_url, 'flv_url': flv_url,
-                       'record_url': m3u8_url}
+                       'record_url': flv_url}
         return result
 
     @staticmethod
