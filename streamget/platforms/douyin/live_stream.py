@@ -5,7 +5,7 @@ import urllib.parse
 from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
 from ..base import BaseLiveStream
-from .utils import DouyinUtils
+from .utils import DouyinUtils, UnsupportedUrlError
 
 
 class DouyinLiveStream(BaseLiveStream):
@@ -38,25 +38,30 @@ class DouyinLiveStream(BaseLiveStream):
         """
         url = url.strip()
         douyin_utils = DouyinUtils()
-        room_id, sec_uid = await douyin_utils.get_sec_user_id(url, proxy_addr=self.proxy_addr)
-        app_params = {
-            "verifyFp": "verify_lxj5zv70_7szNlAB7_pxNY_48Vh_ALKF_GA1Uf3yteoOY",
-            "type_id": "0",
-            "live_id": "1",
-            "room_id": room_id,
-            "sec_user_id": sec_uid,
-            "version_code": "99.99.99",
-            "app_id": "1128"
-        }
-        api = f'https://webcast.amemv.com/webcast/room/reflow/info/?{urllib.parse.urlencode(app_params)}'
-        json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
-        if not process_data:
-            return json.loads(json_str)
-        else:
-            json_data = json.loads(json_str)['data']
-            room_data = json_data['room']
-            room_data['anchor_name'] = room_data['owner']['nickname']
-            return room_data
+        try:
+            room_id, sec_uid = await douyin_utils.get_sec_user_id(url, proxy_addr=self.proxy_addr)
+            app_params = {
+                "verifyFp": "verify_lxj5zv70_7szNlAB7_pxNY_48Vh_ALKF_GA1Uf3yteoOY",
+                "type_id": "0",
+                "live_id": "1",
+                "room_id": room_id,
+                "sec_user_id": sec_uid,
+                "version_code": "99.99.99",
+                "app_id": "1128"
+            }
+            api = f'https://webcast.amemv.com/webcast/room/reflow/info/?{urllib.parse.urlencode(app_params)}'
+            json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+            if not process_data:
+                return json.loads(json_str)
+            else:
+                json_data = json.loads(json_str)['data']
+                room_data = json_data['room']
+                room_data['anchor_name'] = room_data['owner']['nickname']
+                return room_data
+
+        except UnsupportedUrlError:
+            unique_id = await douyin_utils.get_unique_id(url, proxy_addr=self.proxy_addr)
+            return await self.fetch_web_stream_data(f'https://live.douyin.com/{unique_id}')
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
@@ -143,4 +148,3 @@ class DouyinLiveStream(BaseLiveStream):
                 'record_url': m3u8_url or flv_url,
             }
         return wrap_stream(result)
-

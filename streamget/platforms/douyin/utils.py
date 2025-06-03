@@ -7,20 +7,24 @@ import httpx
 from ... import JS_SCRIPT_PATH, utils
 
 
+class UnsupportedUrlError(Exception):
+    pass
+
+
 class DouyinUtils:
     HEADERS = {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 11; SAMSUNG SM-G973U) AppleWebKit/537.36 (KHTML, like Gecko) '
+        'user-agent': 'Mozilla/5.0 (Linux; Android 11; SAMSUNG SM-G973U) AppleWebKit/537.36 (KHTML, like Gecko) '
                       'SamsungBrowser/14.2 Chrome/87.0.4280.141 Mobile Safari/537.36',
-        'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-        'Cookie': 's_v_web_id=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf'
+        'accept-language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+        'cookie': 's_v_web_id=verify_lk07kv74_QZYCUApD_xhiB_405x_Ax51_GYO9bUIyZQVf'
     }
 
     HEADERS_PC = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                       'Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0',
-        'Cookie': 'sessionid=7494ae59ae06784454373ce25761e864; __ac_nonce=0670497840077ee4c9eb2; '
+        'cookie': 'sessionid=7494ae59ae06784454373ce25761e864; __ac_nonce=0670497840077ee4c9eb2; '
                   '__ac_signature=_02B4Z6wo00f012DZczQAAIDCJJBb3EjnINdg-XeAAL8-db;  '
-                  's_v_web_id=verify_m1ztgtjj_vuHnMLZD_iwZ9_4YO4_BdN1_7wLP3pyqXsf2; ',
+                  's_v_web_id=verify_m1ztgtjj_vuHnMLZD_iwZ9_4YO4_BdN1_7wLP3pyqXsf2; '
     }
 
     @staticmethod
@@ -55,32 +59,45 @@ class DouyinUtils:
                     else:
                         raise RuntimeError("Could not find sec_user_id in the URL.")
                 else:
-                    raise RuntimeError("The redirect URL does not contain 'reflow/'.")
+                    raise UnsupportedUrlError("The redirect URL does not contain 'reflow/'.")
+        except UnsupportedUrlError as e:
+            raise e
         except Exception as e:
             raise RuntimeError(f"An error occurred: {e}")
         return None
 
     @staticmethod
     async def get_unique_id(url: str, proxy_addr: str | None = None, headers: dict | None = None) -> str | None:
+        """Get unique_id from user profile"""
         if not headers or all(k.lower() not in ['user-agent', 'cookie'] for k in headers):
-            headers = DouyinUtils.HEADERS_PC
+            headers = DouyinUtils.HEADERS
 
         try:
             proxy_addr = utils.handle_proxy_addr(proxy_addr)
             async with httpx.AsyncClient(proxy=proxy_addr, timeout=15) as client:
                 response = await client.get(url, headers=headers, follow_redirects=True)
                 redirect_url = str(response.url)
+                if 'reflow/' in str(redirect_url):
+                    raise UnsupportedUrlError("Unsupported URL")
+
                 sec_user_id = redirect_url.split('?')[0].rsplit('/', maxsplit=1)[1]
 
-                user_page_response = await client.get(f'https://www.douyin.com/user/{sec_user_id}', headers=headers)
-                matches = re.findall(r'undefined\\"},\\"uniqueId\\":\\"(.*?)\\",\\"customVerify',
-                                     user_page_response.text)
+                headers['cookie'] = ('ttwid=1%7C4ejCkU2bKY76IySQENJwvGhg1IQZrgGEupSyTKKfuyk%7C1740470403%7Cbc9a'
+                                     'd2ee341f1a162f9e27f4641778030d1ae91e31f9df6553a8f2efa3bdb7b4; __ac_nonce=06'
+                                     '83e59f3009cc48fbab0; __ac_signature=_02B4Z6wo00f01mG6waQAAIDB9JUCzFb6.TZhmsU'
+                                     'AAPBf34; __ac_referer=__ac_blank')
+                profile_response = await client.get(f'https://www.iesdouyin.com/share/user/{sec_user_id}',
+                                                    headers=headers, follow_redirects=True)
+                matches = re.findall(r'unique_id":"(.*?)","verification_type', profile_response.text)
+
                 if matches:
                     unique_id = matches[-1]
                     return unique_id
                 else:
                     raise RuntimeError("Could not find unique_id in the response.")
 
+        except UnsupportedUrlError as e:
+            raise e
         except Exception as e:
             raise RuntimeError(f"An error occurred: {e}")
         return None
