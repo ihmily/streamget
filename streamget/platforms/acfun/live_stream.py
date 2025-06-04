@@ -16,6 +16,15 @@ class AcfunLiveStream(BaseLiveStream):
         super().__init__(proxy_addr, cookies)
         self.pc_headers = self._get_pc_headers()
 
+    def _get_pc_headers(self) -> dict:
+        return {
+            'Origin': 'https://live.acfun.cn',
+            'Referer': 'https://live.acfun.cn/',
+            'cookie': self.cookies or '__ac_nonce=064caded4009deafd8b89;',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0',
+        }
+
     async def _get_acfun_sign_params(self) -> tuple:
         did = f'web_{utils.generate_random_string(16)}'
         headers = {
@@ -67,6 +76,7 @@ class AcfunLiveStream(BaseLiveStream):
                 'authorId': author_id,
                 'pullStreamType': 'FLV',
             }
+
             play_api = f'https://api.kuaishouzt.com/rest/zt/live/web/startPlay?{urllib.parse.urlencode(params)}'
             json_str = await async_req(play_api, data=data, proxy_addr=self.proxy_addr, headers=self.pc_headers)
             json_data = json.loads(json_str)
