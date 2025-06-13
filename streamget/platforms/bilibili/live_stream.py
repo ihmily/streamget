@@ -40,7 +40,7 @@ class BilibiliLiveStream(BaseLiveStream):
         api = f'https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom?room_id={room_id}'
         json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
         room_info = json.loads(json_str)
-        title = room_info['data']['room_info']['title']
+        title = room_info['data']['room_info']['title'] if room_info.get('data') else ''
         return title
 
     async def get_bilibili_stream_data(self, url: str, qn: str = '10000', platform: str = 'web') -> str | None:
