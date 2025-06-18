@@ -95,6 +95,7 @@ StreamData(platform='xxxx', anchor_name='xxxx', is_live=True, m3u8_url="xxx"...)
 | 淘宝        | ✅              | ✅           | ✅           | ✅           | ✅                |
 | 京东        | ✅              | ✅           | ✅           |             |                  |
 | Faceit      | ✅              | ✅           | ❌           |             |                  |
+| 连接直播    | ✅              | ✅           | ✅           |             |                  |
 | More ...    |                |             |             |             |                  |
 
 ### Notes

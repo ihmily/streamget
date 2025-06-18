@@ -34,6 +34,7 @@ from .platforms.kuaishou.live_stream import KwaiLiveStream
 from .platforms.kugou.live_stream import KugouLiveStream
 from .platforms.langlive.live_stream import LangLiveStream
 from .platforms.lehai.live_stream import LehaiLiveStream
+from .platforms.lianjie.live_stream import LianJieLiveStream
 from .platforms.liveme.live_stream import LiveMeLiveStream
 from .platforms.look.live_stream import LookLiveStream
 from .platforms.maoer.live_stream import MaoerLiveStream
@@ -81,6 +82,7 @@ __all__ = [
     "KwaiLiveStream",
     "LangLiveStream",
     "LehaiLiveStream",
+    "LianJieLiveStream",
     "LiveMeLiveStream",
     "LookLiveStream",
     "MaoerLiveStream",
