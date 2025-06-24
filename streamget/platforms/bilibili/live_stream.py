@@ -1,6 +1,7 @@
 import json
 import urllib.parse
 from operator import itemgetter
+import logging
 
 from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
@@ -44,7 +45,6 @@ class BilibiliLiveStream(BaseLiveStream):
         return title
 
     async def get_bilibili_stream_data(self, url: str, qn: str = '10000', platform: str = 'web') -> str | None:
-
         room_id = url.split('?')[0].rsplit('/', maxsplit=1)[1]
         params = {
             'cid': room_id,
@@ -79,7 +79,7 @@ class BilibiliLiveStream(BaseLiveStream):
             json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
             json_data = json.loads(json_str)
             if json_data['data']['live_status'] == 0:
-                print("The anchor did not start broadcasting.")
+                logging.info("The anchor did not start broadcasting.")
                 return
             playurl_info = json_data['data']['playurl_info']
             format_list = playurl_info['playurl']['stream'][0]['format']
@@ -96,6 +96,66 @@ class BilibiliLiveStream(BaseLiveStream):
             m3u8_url = host + base_url + extra
             return m3u8_url
 
+    async def _get_anchor_info_from_room_init(self, room_id: str) -> tuple[str, bool]:
+        """通过room_init API获取主播信息"""
+        try:
+            api = f'https://api.live.bilibili.com/room/v1/Room/room_init?id={room_id}'
+            logging.debug(f"正在请求room_init API: {api}")
+            
+            json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+            logging.debug(f"room_init API响应: {json_str}")
+            
+            room_info = json.loads(json_str)
+            if room_info['code'] != 0:
+                logging.error(f"Failed to get room info: {room_info['msg']}")
+                return '', False
+            
+            uid = room_info['data']['uid']
+            live_status = room_info['data']['live_status'] == 1
+            logging.debug(f"解析到UID: {uid}, 直播状态: {live_status}")
+
+            api = f'https://api.live.bilibili.com/live_user/v1/Master/info?uid={uid}'
+            logging.debug(f"正在请求Master/info API: {api}")
+            
+            json_str2 = await async_req(api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+            logging.debug(f"Master/info API响应: {json_str2}")
+            
+            anchor_info = json.loads(json_str2)
+            if anchor_info['code'] != 0:
+                logging.error(f"Failed to get anchor info: {anchor_info['msg']}")
+                return '', live_status
+                
+            anchor_name = anchor_info['data']['info']['uname']
+            logging.debug(f"解析到主播名称: {anchor_name}")
+            
+            return anchor_name, live_status
+        except Exception as e:
+            logging.error(f"Error in _get_anchor_info_from_room_init: {str(e)}", exc_info=True)
+            return '', False
+
+    async def _get_anchor_info_from_room_info(self, room_id: str) -> tuple[str, bool]:
+        """通过room_info API获取主播信息(备用API)"""
+        try:
+            api = f'https://api.live.bilibili.com/room/v1/Room/get_info?room_id={room_id}'
+            logging.debug(f"正在请求room_info API: {api}")
+            
+            json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+            logging.debug(f"room_info API响应: {json_str}")
+            
+            room_info = json.loads(json_str)
+            if room_info['code'] != 0:
+                logging.error(f"Failed to get room info: {room_info['msg']}")
+                return '', False
+            
+            uid = room_info['data']['uid']
+            live_status = room_info['data']['live_status'] == 1
+            logging.debug(f"解析到UID: {uid}, 直播状态: {live_status}")
+                
+            return uid, live_status
+        except Exception as e:
+            logging.error(f"Error in _get_anchor_info_from_room_info: {str(e)}", exc_info=True)
+            return '', False
+
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
         Fetches web stream data for a live room.
@@ -109,21 +169,24 @@ class BilibiliLiveStream(BaseLiveStream):
         """
         try:
             room_id = url.split('?')[0].rsplit('/', maxsplit=1)[1]
-            json_str = await async_req(f'https://api.live.bilibili.com/room/v1/Room/room_init?id={room_id}',
-                                       proxy_addr=self.proxy_addr, headers=self.pc_headers)
-            room_info = json.loads(json_str)
-            uid = room_info['data']['uid']
-            live_status = True if room_info['data']['live_status'] == 1 else False
-
-            api = f'https://api.live.bilibili.com/live_user/v1/Master/info?uid={uid}'
-            json_str2 = await async_req(api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
-            anchor_info = json.loads(json_str2)
-            anchor_name = anchor_info['data']['info']['uname']
+            
+            # 尝试从主API获取信息
+            anchor_name, live_status = await self._get_anchor_info_from_room_init(room_id)
+            
+            # 如果主API失败,尝试备用API
+            if not anchor_name:
+                logging.info("Primary API failed, trying backup API...")
+                anchor_name, live_status = await self._get_anchor_info_from_room_info(room_id)
+            
+            if not anchor_name:
+                logging.error(f"Failed to get anchor name for room {room_id}")
+                return {"anchor_name": '', "live_status": False, "room_url": url}
 
             title = await self._get_bilibili_room_info_h5(url)
             return {"anchor_name": anchor_name, "live_status": live_status, "room_url": url, "title": title}
+            
         except Exception as e:
-            print(e)
+            logging.error(f"Error in fetch_web_stream_data: {str(e)}")
             return {"anchor_name": '', "live_status": False, "room_url": url}
 
     async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
