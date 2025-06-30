@@ -4,6 +4,7 @@ import urllib.parse
 
 from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
+from ...utils import generate_random_string
 from ..base import BaseLiveStream
 
 
@@ -24,6 +25,7 @@ class TwitchLiveStream(BaseLiveStream):
             'client-id': 'kimne78kx3ncx6brgo4mv6wki5h1ko',
             'client-integrity': self.access_token or '',
             'content-type': 'text/plain;charset=UTF-8',
+            'device-id': generate_random_string(16).lower(),
             'cookie': self.cookies or '',
         }
 
@@ -130,4 +132,3 @@ class TwitchLiveStream(BaseLiveStream):
         """
         data = await self.get_stream_url(json_data, video_quality, spec=True, platform='Twitch')
         return wrap_stream(data)
-
