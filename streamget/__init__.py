@@ -19,6 +19,7 @@ from .platforms.baidu.live_stream import BaiduLiveStream
 from .platforms.bigo.live_stream import BigoLiveStream
 from .platforms.bilibili.live_stream import BilibiliLiveStream
 from .platforms.blued.live_stream import BluedLiveStream
+from .platforms.changliao.live_stream import ChangliaoLiveStream
 from .platforms.chzzk.live_stream import ChzzkLiveStream
 from .platforms.douyin.live_stream import DouyinLiveStream
 from .platforms.douyu.live_stream import DouyuLiveStream
@@ -67,6 +68,7 @@ __all__ = [
     "BigoLiveStream",
     "BilibiliLiveStream",
     "BluedLiveStream",
+    "ChangliaoLiveStream",
     "ChzzkLiveStream",
     "DouyinLiveStream",
     "DouyuLiveStream",
