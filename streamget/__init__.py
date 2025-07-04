@@ -39,6 +39,7 @@ from .platforms.lianjie.live_stream import LianJieLiveStream
 from .platforms.liveme.live_stream import LiveMeLiveStream
 from .platforms.look.live_stream import LookLiveStream
 from .platforms.maoer.live_stream import MaoerLiveStream
+from .platforms.migu.live_stream import MiguLiveStream
 from .platforms.netease.live_stream import NeteaseLiveStream
 from .platforms.pandatv.live_stream import PandaLiveStream
 from .platforms.piaopiao.live_stream import PiaopaioLiveStream
@@ -88,6 +89,7 @@ __all__ = [
     "LiveMeLiveStream",
     "LookLiveStream",
     "MaoerLiveStream",
+    "MiguLiveStream",
     "NeteaseLiveStream",
     "PandaLiveStream",
     "PiaopaioLiveStream",
