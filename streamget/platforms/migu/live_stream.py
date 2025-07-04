@@ -38,11 +38,12 @@ class MiguLiveStream(BaseLiveStream):
         json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data = json.loads(json_str)
         room_id = json_data['body']['pId']
-        anchor_name = json_data['body']['title']
-        title = json_data['body']['title'] + '-' + json_data['body'].get('detailPageTitle', '')
+        anchor_name = json_data['body'].get('title')
+        title = anchor_name + '-' + json_data['body'].get('detailPageTitle', '')
         return room_id, anchor_name, title
 
-    async def _get_dd_calcu(self, url):
+    @staticmethod
+    async def _get_dd_calcu(url):
         try:
             result = subprocess.run(
                 ["node", f"{JS_SCRIPT_PATH}/migu.js", url],
@@ -67,11 +68,11 @@ class MiguLiveStream(BaseLiveStream):
         """
 
         room_id, anchor_name, live_title = await self._get_live_room_info(url)
-        result = {"anchor_name": anchor_name, "is_live": False, "title": live_title}
+        result = {"anchor_name": anchor_name, "is_live": False}
         if not room_id:
             raise RuntimeError("Room ID fetch error")
         params = {
-            'contId': '955797775',
+            'contId': room_id,
             'rateType': '3',
             'clientId': str(uuid.uuid4()),
             'timestamp': int(time.time()*1000),
@@ -88,6 +89,7 @@ class MiguLiveStream(BaseLiveStream):
         if live_status != '1':
             return result
         else:
+            result['title'] = live_title
             source_url = json_data['body']['urlInfo']['url']
             ddCalcu = await self._get_dd_calcu(source_url)
             real_source_url = f'{source_url}&ddCalcu={ddCalcu}&sv=10010'
