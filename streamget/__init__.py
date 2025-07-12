@@ -33,6 +33,7 @@ from .platforms.inke.live_stream import InkeLiveStream
 from .platforms.jd.live_stream import JDLiveStream
 from .platforms.kuaishou.live_stream import KwaiLiveStream
 from .platforms.kugou.live_stream import KugouLiveStream
+from .platforms.laixiu.live_stream import LaixiuLiveStream
 from .platforms.langlive.live_stream import LangLiveStream
 from .platforms.lehai.live_stream import LehaiLiveStream
 from .platforms.lianjie.live_stream import LianJieLiveStream
@@ -83,6 +84,7 @@ __all__ = [
     "JDLiveStream",
     "KugouLiveStream",
     "KwaiLiveStream",
+    "LaixiuLiveStream",
     "LangLiveStream",
     "LehaiLiveStream",
     "LianJieLiveStream",
