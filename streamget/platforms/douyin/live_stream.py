@@ -109,8 +109,9 @@ class DouyinLiveStream(BaseLiveStream):
                         origin_url_list = json.loads(match_json_str3.group(1) + '}')
 
                 if origin_url_list:
-                    origin_m3u8 = {'ORIGIN': origin_url_list["hls"]}
-                    origin_flv = {'ORIGIN': origin_url_list["flv"]}
+                    origin_hls_codec = origin_url_list['sdk_params'].get('VCodec') or ''
+                    origin_m3u8 = {'ORIGIN': origin_url_list["hls"] + '&codec=' + origin_hls_codec}
+                    origin_flv = {'ORIGIN': origin_url_list["flv"] + '&codec=' + origin_hls_codec}
                     hls_pull_url_map = json_data['stream_url']['hls_pull_url_map']
                     flv_pull_url = json_data['stream_url']['flv_pull_url']
                     json_data['stream_url']['hls_pull_url_map'] = {**origin_m3u8, **hls_pull_url_map}

@@ -1,4 +1,3 @@
-import asyncio
 import json
 import re
 from operator import itemgetter
@@ -27,24 +26,20 @@ class TikTokLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
-        for i in range(3):
-            html_str = await async_req(url=url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
-            await asyncio.sleep(1)
-            if "We regret to inform you that we have discontinued operating TikTok" in html_str:
-                msg = re.search('<p>\n\\s+(We regret to inform you that we have discontinu.*?)\\.\n\\s+</p>', html_str)
-                raise ConnectionError(
-                    f"Your proxy node's regional network is blocked from accessing TikTok; please switch to a node in "
-                    f"another region to access. {msg.group(1) if msg else ''}"
-                )
-            if 'UNEXPECTED_EOF_WHILE_READING' not in html_str:
-                try:
-                    json_str = re.findall(
-                        '<script id="SIGI_STATE" type="application/json">(.*?)</script>',
-                        html_str, re.DOTALL)[0]
-                except Exception:
-                    raise ConnectionError("Please check if your network can access the TikTok website normally")
-                json_data = json.loads(json_str)
-                return json_data
+        html_str = await async_req(url=url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+        if "We regret to inform you that we have discontinued operating TikTok" in html_str:
+            msg = re.search('<p>\n\\s+(We regret to inform you that we have discontinu.*?)\\.\n\\s+</p>', html_str)
+            raise ConnectionError(
+                "Your proxy node's regional network is blocked from accessing TikTok; please switch to a node in "
+                f"another region to access. {msg.group(1) if msg else ''}"
+            )
+        if 'UNEXPECTED_EOF_WHILE_READING' not in html_str:
+            json_str = re.findall(
+                '<script id="SIGI_STATE" type="application/json">(.*?)</script>', html_str, re.DOTALL)
+            if not json_str:
+                raise ConnectionError("Please check if your network can access the TikTok website normally")
+            json_data = json.loads(json_str[0])
+            return json_data
 
     async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
@@ -57,10 +52,11 @@ class TikTokLiveStream(BaseLiveStream):
             play_list = []
             for key in stream:
                 url_info = stream[key]['main']
-                play_url = url_info[q_key]
                 sdk_params = url_info['sdk_params']
                 sdk_params = json.loads(sdk_params)
                 vbitrate = int(sdk_params['vbitrate'])
+                v_codec = sdk_params.get('VCodec', '')
+                play_url = url_info[q_key] + '&codec=' + v_codec
                 resolution = sdk_params['resolution']
                 if vbitrate != 0 and resolution:
                     width, height = map(int, resolution.split('x'))
