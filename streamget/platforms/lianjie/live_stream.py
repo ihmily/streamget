@@ -11,7 +11,7 @@ class LianJieLiveStream(BaseLiveStream):
     """
     def __init__(self, proxy_addr: str | None = None, cookies: str | None = None):
         super().__init__(proxy_addr, cookies)
-        self.mobile_headers = self._get_pc_headers()
+        self.pc_headers = self._get_pc_headers()
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
@@ -26,7 +26,7 @@ class LianJieLiveStream(BaseLiveStream):
         """
         room_id = url.split('?')[0].rsplit('lailianjie.com/', maxsplit=1)[-1]
         play_api = f'https://api.lailianjie.com/ApiServices/service/live/getRoomInfo?&_$t=&_sign=&roomNumber={room_id}'
-        json_str = await async_req(play_api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+        json_str = await async_req(play_api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data = json.loads(json_str)
         if not process_data:
             return json_data
