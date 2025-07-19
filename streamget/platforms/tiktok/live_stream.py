@@ -56,7 +56,12 @@ class TikTokLiveStream(BaseLiveStream):
                 sdk_params = json.loads(sdk_params)
                 vbitrate = int(sdk_params['vbitrate'])
                 v_codec = sdk_params.get('VCodec', '')
-                play_url = url_info[q_key] + '&codec=' + v_codec
+                play_url = ''
+                if url_info.get(q_key):
+                    if url_info[q_key].endswith(".flv") or url_info[q_key].endswith(".m3u8"):
+                        play_url = url_info[q_key] + '?codec=' + v_codec
+                    else:
+                        play_url = url_info[q_key] + '&codec=' + v_codec
                 resolution = sdk_params['resolution']
                 if vbitrate != 0 and resolution:
                     width, height = map(int, resolution.split('x'))
@@ -93,8 +98,9 @@ class TikTokLiveStream(BaseLiveStream):
             flv_dict: dict = flv_url_list[quality_index]
             m3u8_dict: dict = m3u8_url_list[quality_index]
 
+            check_url = m3u8_dict.get('url') or flv_dict.get('url')
             ok = await get_response_status(
-                url=m3u8_dict['url'], proxy_addr=self.proxy_addr, headers=self.pc_headers, http2=False)
+                url=check_url, proxy_addr=self.proxy_addr, headers=self.pc_headers, http2=False)
 
             if not ok:
                 index = quality_index + 1 if quality_index < 4 else quality_index - 1
