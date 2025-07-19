@@ -3,7 +3,7 @@ import re
 import urllib.parse
 
 from ...data import StreamData, wrap_stream
-from ...requests.async_http import async_req
+from ...requests.async_http import async_req, get_response_status
 from ..base import BaseLiveStream
 from .utils import DouyinUtils, UnsupportedUrlError
 
@@ -140,6 +140,12 @@ class DouyinLiveStream(BaseLiveStream):
             video_quality, quality_index = self.get_quality_index(video_quality)
             m3u8_url = m3u8_url_list[quality_index]
             flv_url = flv_url_list[quality_index]
+            ok = await get_response_status(url=m3u8_url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+            if not ok:
+                index = quality_index+1 if quality_index < 4 else quality_index - 1
+                m3u8_url = m3u8_url_list[index]
+                flv_url = flv_url_list[index]
+
             result |= {
                 'is_live': True,
                 'title': json_data['title'],

@@ -3,7 +3,7 @@ import re
 from operator import itemgetter
 
 from ...data import StreamData, wrap_stream
-from ...requests.async_http import async_req
+from ...requests.async_http import async_req, get_response_status
 from ..base import BaseLiveStream
 
 
@@ -26,7 +26,7 @@ class TikTokLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
-        html_str = await async_req(url=url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+        html_str = await async_req(url=url, proxy_addr=self.proxy_addr, headers=self.pc_headers, http2=False)
         if "We regret to inform you that we have discontinued operating TikTok" in html_str:
             msg = re.search('<p>\n\\s+(We regret to inform you that we have discontinu.*?)\\.\n\\s+</p>', html_str)
             raise ConnectionError(
@@ -92,6 +92,15 @@ class TikTokLiveStream(BaseLiveStream):
             video_quality, quality_index = self.get_quality_index(video_quality)
             flv_dict: dict = flv_url_list[quality_index]
             m3u8_dict: dict = m3u8_url_list[quality_index]
+
+            ok = await get_response_status(
+                url=m3u8_dict['url'], proxy_addr=self.proxy_addr, headers=self.pc_headers, http2=False)
+
+            if not ok:
+                index = quality_index + 1 if quality_index < 4 else quality_index - 1
+                flv_dict: dict = flv_url_list[index]
+                m3u8_dict: dict = m3u8_url_list[index]
+
             flv_url = flv_dict['url'].replace("https://", "http://")
             m3u8_url = m3u8_dict['url'].replace("https://", "http://")
             result |= {
