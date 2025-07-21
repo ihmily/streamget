@@ -44,6 +44,7 @@ from .platforms.migu.live_stream import MiguLiveStream
 from .platforms.netease.live_stream import NeteaseLiveStream
 from .platforms.pandatv.live_stream import PandaLiveStream
 from .platforms.piaopiao.live_stream import PiaopaioLiveStream
+from .platforms.picarto.live_stream import PicartoLiveStream
 from .platforms.popkontv.live_stream import PopkonTVLiveStream
 from .platforms.qiandurebo.live_stream import QiandureboLiveStream
 from .platforms.rednote.live_stream import RedNoteLiveStream
@@ -95,6 +96,7 @@ __all__ = [
     "NeteaseLiveStream",
     "PandaLiveStream",
     "PiaopaioLiveStream",
+    "PicartoLiveStream",
     "PopkonTVLiveStream",
     "QiandureboLiveStream",
     "RedNoteLiveStream",
