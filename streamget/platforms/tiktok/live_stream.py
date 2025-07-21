@@ -15,6 +15,14 @@ class TikTokLiveStream(BaseLiveStream):
         super().__init__(proxy_addr, cookies)
         self.pc_headers = self._get_pc_headers()
 
+    def _get_pc_headers(self) -> dict:
+        return {
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
+            'accept-language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+            'cookie': self.cookies or 'tt-target-idc=useast5',
+            'referer': 'https://www.tiktok.com/live'
+        }
+
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
         Fetches web stream data for a live room.
