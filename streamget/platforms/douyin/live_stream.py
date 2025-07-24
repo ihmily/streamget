@@ -49,7 +49,7 @@ class DouyinLiveStream(BaseLiveStream):
                 "version_code": "99.99.99",
                 "app_id": "1128"
             }
-            api = f'https://webcast.amemv.com/webcast/room/reflow/info/?{urllib.parse.urlencode(app_params)}'
+            api = 'https://webcast.amemv.com/webcast/room/reflow/info/?' + urllib.parse.urlencode(app_params)
             json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
             if not process_data:
                 return json.loads(json_str)
@@ -57,11 +57,21 @@ class DouyinLiveStream(BaseLiveStream):
                 json_data = json.loads(json_str)['data']
                 room_data = json_data['room']
                 room_data['anchor_name'] = room_data['owner']['nickname']
+                stream_data = room_data['stream_url']['live_core_sdk_data']['pull_data']['stream_data']
+                origin_data = json.loads(stream_data)['data']['origin']['main']
+                sdk_params = json.loads(origin_data['sdk_params'])
+                origin_hls_codec = sdk_params.get('VCodec') or ''
+                origin_m3u8 = {'ORIGIN': origin_data["hls"] + '&codec=' + origin_hls_codec}
+                origin_flv = {'ORIGIN': origin_data["flv"] + '&codec=' + origin_hls_codec}
+                hls_pull_url_map = room_data['stream_url']['hls_pull_url_map']
+                flv_pull_url = room_data['stream_url']['flv_pull_url']
+                room_data['stream_url']['hls_pull_url_map'] = {**origin_m3u8, **hls_pull_url_map}
+                room_data['stream_url']['flv_pull_url'] = {**origin_flv, **flv_pull_url}
                 return room_data
 
         except UnsupportedUrlError:
             unique_id = await douyin_utils.get_unique_id(url, proxy_addr=self.proxy_addr)
-            return await self.fetch_web_stream_data(f'https://live.douyin.com/{unique_id}')
+            return await self.fetch_web_stream_data('https://live.douyin.com/' + unique_id)
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
