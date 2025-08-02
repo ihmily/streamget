@@ -37,7 +37,7 @@ class MiguLiveStream(BaseLiveStream):
         api = f'https://vms-sc.miguvideo.com/vms-match/v6/staticcache/basic/basic-data/{web_id}/miguvideo'
         json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data = json.loads(json_str)
-        room_id = json_data['body']['pId']
+        room_id = json_data['body'].get('pId')
         anchor_name = json_data['body'].get('title')
         title = anchor_name + '-' + json_data['body'].get('detailPageTitle', '')
         return room_id, anchor_name, title
@@ -70,7 +70,7 @@ class MiguLiveStream(BaseLiveStream):
         room_id, anchor_name, live_title = await self._get_live_room_info(url)
         result = {"anchor_name": anchor_name, "is_live": False}
         if not room_id:
-            raise RuntimeError("Room ID fetch error")
+            return result
         params = {
             'contId': room_id,
             'rateType': '3',
