@@ -76,6 +76,6 @@ class WeiboLiveStream(BaseLiveStream):
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
-        data = await self.get_stream_url(json_data, video_quality, spec=True, platform='微博直播')
+        data = await self.get_stream_url(json_data, video_quality, spec=False, platform='微博直播', url_type='all',
+                                         hls_extra_key='m3u8_url', flv_extra_key='flv_url')
         return wrap_stream(data)
-
