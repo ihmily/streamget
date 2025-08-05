@@ -21,6 +21,7 @@ class WeiboLiveStream(BaseLiveStream):
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
             'cookie': self.cookies or default_cookie,
+            'referer': 'https://weibo.com/u/5885340893'
         }
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
