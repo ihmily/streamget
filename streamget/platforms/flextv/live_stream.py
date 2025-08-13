@@ -22,7 +22,7 @@ class FlexTVLiveStream(BaseLiveStream):
             'accept': 'application/json, text/plain, */*',
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
             'content-type': 'application/json;charset=UTF-8',
-            'referer': 'https://www.flextv.co.kr/',
+            'referer': 'https://www.ttinglive.com/',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
             'cookie': self.cookies or '',
         }
@@ -36,7 +36,7 @@ class FlexTVLiveStream(BaseLiveStream):
             'device': 'PCWEB',
         }
 
-        url = 'https://api.flextv.co.kr/v2/api/auth/signin'
+        url = 'https://api.ttinglive.com/v2/api/auth/signin'
 
         try:
             _, cookie_dict = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers,
@@ -55,7 +55,7 @@ class FlexTVLiveStream(BaseLiveStream):
     async def get_flextv_stream_url(self, url: str) -> str:
         async def fetch_data() -> dict:
             user_id = url.split('/live')[0].rsplit('/', maxsplit=1)[-1]
-            play_api = f'https://api.flextv.co.kr/api/channels/{user_id}/stream?option=all'
+            play_api = f'https://api.ttinglive.com/api/channels/{user_id}/stream?option=all'
             json_str = await async_req(play_api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
             if 'HTTP Error 400: Bad Request' in json_str:
                 raise ConnectionError(
@@ -83,7 +83,7 @@ class FlexTVLiveStream(BaseLiveStream):
         result = {"anchor_name": '', "is_live": False}
         new_cookies = None
         try:
-            url2 = f'https://www.flextv.co.kr/channels/{user_id}/live'
+            url2 = f'https://www.ttinglive.com/channels/{user_id}/live'
             html_str = await async_req(url2, proxy_addr=self.proxy_addr, headers=self.pc_headers)
             json_str = re.search('<script id="__NEXT_DATA__" type=".*">(.*?)</script>', html_str).group(1)
             json_data = json.loads(json_str)
@@ -117,7 +117,7 @@ class FlexTVLiveStream(BaseLiveStream):
                         result['play_url_list'] = play_url_list
                         result['is_live'] = True
             else:
-                url2 = f'https://www.flextv.co.kr/channels/{user_id}'
+                url2 = f'https://www.ttinglive.com/channels/{user_id}'
                 html_str = await async_req(url2, proxy_addr=self.proxy_addr, headers=self.pc_headers)
                 anchor_name = re.search('<meta name="twitter:title" content="(.*?)의', html_str).group(1)
                 result["anchor_name"] = anchor_name
