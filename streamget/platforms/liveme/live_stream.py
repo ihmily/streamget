@@ -1,4 +1,5 @@
 import json
+import re
 import urllib.parse
 
 import execjs
@@ -36,6 +37,13 @@ class LiveMeLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
+
+        if 'index.html' not in url:
+            html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+            match_url = re.search('<meta property="og:url" content="(.*?)">', html_str)
+            if match_url:
+                url = match_url.group(1)
+
         room_id = url.split("/index.html")[0].rsplit('/', maxsplit=1)[-1]
         try:
             with open(f'{JS_SCRIPT_PATH}/liveme.js') as f:

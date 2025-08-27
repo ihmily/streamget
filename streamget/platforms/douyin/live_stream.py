@@ -166,4 +166,3 @@ class DouyinLiveStream(BaseLiveStream):
                 'record_url': m3u8_url or flv_url,
             }
         return wrap_stream(result)
-    
