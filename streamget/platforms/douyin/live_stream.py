@@ -96,6 +96,7 @@ class DouyinLiveStream(BaseLiveStream):
             room_store = re.search('"roomStore":(.*?),"linkmicStore"', cleaned_string, re.DOTALL).group(1)
             anchor_name = re.search('"nickname":"(.*?)","avatar_thumb', room_store, re.DOTALL).group(1)
             room_store = room_store.split(',"has_commerce_goods"')[0] + '}}}'
+            room_store = re.sub(r'"title":""([^"]+)""', r'"title":"\1"', room_store)
             if not process_data:
                 return json.loads(room_store)
             else:
@@ -165,3 +166,4 @@ class DouyinLiveStream(BaseLiveStream):
                 'record_url': m3u8_url or flv_url,
             }
         return wrap_stream(result)
+    
