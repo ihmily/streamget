@@ -27,7 +27,8 @@ class TwitCastingLiveStream(BaseLiveStream):
             'content-type': 'application/x-www-form-urlencoded',
             'referer': 'https://twitcasting.tv/indexcaslogin.php?redir=%2Findexloginwindow.php%3Fnext%3D%252F&keep=1',
             'user-agent': 'ios/7.830 (ios 17.0; ; iPhone 15 (A2846/A3089/A3090/A3092))',
-            'cookie': self.cookies or '',
+            'cookie': self.cookies or 'hl=zh; did=377eda93b5320f104357ab1bc98dfe4d; _ga=GA1.1.869052351.1747879503; '
+                                      'keep=1; chid=relay_trade_jp;',
         }
 
     async def login_twitcasting(self) -> str | None:
@@ -48,9 +49,9 @@ class TwitCastingLiveStream(BaseLiveStream):
             'cs_session_id': cs_session_id,
         }
         try:
-            _, cookie_dict = await async_req(
+            cookie_dict = await async_req(
                 login_api, proxy_addr=self.proxy_addr, headers=self.mobile_headers,
-                json_data=data, return_cookies=True, timeout=20)
+                data=data, return_cookies=True, timeout=20)
             if 'tc_ss' in cookie_dict:
                 self.cookies = utils.dict_to_cookie_str(cookie_dict)
                 self.mobile_headers['cookie'] = self.cookies
