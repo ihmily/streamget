@@ -42,7 +42,7 @@ class BigoLiveStream(BaseLiveStream):
             if '&h=' in url:
                 room_id = url.split('&h=')[-1]
             else:
-                room_id = re.search('www.bigo.tv/cn/(\\w+)', url).group(1)
+                room_id = url.split("?")[0].rsplit("/", maxsplit=1)[-1]
 
         data = {'siteId': room_id}  # roomId
         url2 = 'https://ta.bigo.tv/official_website/studio/getInternalStudioInfo'
