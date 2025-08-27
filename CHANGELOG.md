@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 4.0.8 (18th Aug, 2025)
+## 4.0.8 (27th Aug, 2025)
 
 - Fix douyin double quotation marks error.
 - Fix liveme room id match error.
