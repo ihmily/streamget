@@ -63,7 +63,14 @@ class BigoLiveStream(BaseLiveStream):
         elif result['anchor_name'] == '':
             html_str = await async_req(url=f'https://www.bigo.tv/{url.split("/")[3]}/{room_id}',
                                        proxy_addr=self.proxy_addr, headers=self.pc_headers)
-            result['anchor_name'] = re.search('<title>欢迎来到(.*?)的直播间</title>', html_str, re.DOTALL).group(1)
+            match_anchor_name = re.search('<title>欢迎来到(.*?)2的直播间</title>', html_str, re.DOTALL)
+            if match_anchor_name:
+                anchor_name = match_anchor_name.group(1)
+            else:
+                match_anchor_name = re.search('<meta data-n-head="ssr" data-hid="og:title" property="og:title" '
+                                              'content="(.*?) - BIGO LIVE">', html_str, re.DOTALL)
+                anchor_name = match_anchor_name.group(1)
+            result['anchor_name'] = anchor_name
 
         return result
 
