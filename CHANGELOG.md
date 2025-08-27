@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 4.0.8 (18th Aug, 2025)
+
+- Fix douyin double quotation marks error.
+- Fix liveme room id match error.
+- Fix twitcasting adult login.
+- Fix bigo live parse.
+
+## 4.0.7 (15th Aug, 2025)
+
+- Update Flextv live stream parsing.
 
 ## 4.0.6 (12th Aug, 2025)
 
