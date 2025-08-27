@@ -61,7 +61,7 @@ class BigoLiveStream(BaseLiveStream):
             result['record_url'] = m3u8_url
             result |= {"title": live_title, "is_live": True, "m3u8_url": m3u8_url, 'record_url': m3u8_url}
         elif result['anchor_name'] == '':
-            html_str = await async_req(url=f'https://www.bigo.tv/cn/{room_id}',
+            html_str = await async_req(url=f'https://www.bigo.tv/{url.split("/")[3]}/{room_id}',
                                        proxy_addr=self.proxy_addr, headers=self.pc_headers)
             result['anchor_name'] = re.search('<title>欢迎来到(.*?)的直播间</title>', html_str, re.DOTALL).group(1)
 
