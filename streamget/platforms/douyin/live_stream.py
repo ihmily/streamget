@@ -55,7 +55,9 @@ class DouyinLiveStream(BaseLiveStream):
                 return json.loads(json_str)
             else:
                 json_data = json.loads(json_str)['data']
-                room_data = json_data['room']
+                room_data = json_data.get('room')
+                if not room_data:
+                    raise Exception("VR live is not supported")
                 room_data['anchor_name'] = room_data['owner']['nickname']
                 stream_data = room_data['stream_url']['live_core_sdk_data']['pull_data']['stream_data']
                 origin_data = json.loads(stream_data)['data']['origin']['main']
@@ -95,8 +97,13 @@ class DouyinLiveStream(BaseLiveStream):
             cleaned_string = json_str.replace('\\', '').replace(r'u0026', r'&')
             room_store = re.search('"roomStore":(.*?),"linkmicStore"', cleaned_string, re.DOTALL).group(1)
             anchor_name = re.search('"nickname":"(.*?)","avatar_thumb', room_store, re.DOTALL).group(1)
-            room_store = room_store.split(',"has_commerce_goods"')[0] + '}}}'
-            room_store = re.sub(r'"title":""([^"]+)""', r'"title":"\1"', room_store)
+            room_store = room_store.split(',"has_commerce_goods"')[0] + '}'*3
+
+            title_str = re.search('"title":"(.*?)","user_count_str"', room_store).group(1)
+            rstr = r"[\/\\\:\\\"\, ]"
+            new_title_str = re.sub(rstr, "_", title_str.strip())
+
+            room_store = room_store.replace(title_str, new_title_str)
             if not process_data:
                 return json.loads(room_store)
             else:
@@ -159,7 +166,7 @@ class DouyinLiveStream(BaseLiveStream):
 
             result |= {
                 'is_live': True,
-                'title': json_data['title'],
+                'title': json_data.get('title'),
                 'quality': video_quality,
                 'm3u8_url': m3u8_url,
                 'flv_url': flv_url,
