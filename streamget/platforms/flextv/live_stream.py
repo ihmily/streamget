@@ -110,12 +110,16 @@ class FlexTVLiveStream(BaseLiveStream):
                 result["anchor_name"] = anchor_name
                 play_url = await self.get_flextv_stream_url(url)
                 if play_url:
-                    play_url_list = await self.get_play_url_list(
-                        m3u8=play_url, proxy=self.proxy_addr, headers=self.pc_headers)
-                    if play_url_list:
-                        result['m3u8_url'] = play_url
-                        result['play_url_list'] = play_url_list
-                        result['is_live'] = True
+                    result['is_live'] = True
+                    if '.m3u8' in play_url:
+                        play_url_list = await self.get_play_url_list(
+                            m3u8=play_url, proxy=self.proxy_addr, headers=self.pc_headers)
+                        if play_url_list:
+                            result['m3u8_url'] = play_url
+                            result['play_url_list'] = play_url_list
+                    else:
+                        result['flv_url'] = play_url
+                        result['record_url'] = play_url
             else:
                 url2 = f'https://www.ttinglive.com/channels/{user_id}'
                 html_str = await async_req(url2, proxy_addr=self.proxy_addr, headers=self.pc_headers)
@@ -131,6 +135,9 @@ class FlexTVLiveStream(BaseLiveStream):
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
-        data = await self.get_stream_url(json_data, video_quality, spec=True, platform='FlexTV')
-        return wrap_stream(data)
-    
+        if 'play_url_list' in json_data:
+            data = await self.get_stream_url(json_data, video_quality, spec=True, platform='FlexTV')
+            return wrap_stream(data)
+        else:
+            json_data |= {"platform": "FlexTV"}
+            return wrap_stream(json_data)
