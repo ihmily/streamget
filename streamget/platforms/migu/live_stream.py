@@ -68,7 +68,7 @@ class MiguLiveStream(BaseLiveStream):
         """
 
         room_id, anchor_name, live_title = await self._get_live_room_info(url)
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if not room_id:
             return result
         params = {

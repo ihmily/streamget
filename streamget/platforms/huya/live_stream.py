@@ -43,6 +43,7 @@ class HuyaLiveStream(BaseLiveStream):
         html_str = await async_req(url=url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_str = re.findall('stream: (\\{"data".*?),"iWebDefaultBitRate"', html_str)[0]
         json_data = json.loads(json_str + '}')
+        json_data['live_url'] = url
         return json_data
 
     async def fetch_app_stream_data(self, url: str, process_data: bool = True) -> dict:
@@ -66,6 +67,8 @@ class HuyaLiveStream(BaseLiveStream):
             else:
                 raise Exception('Please use "https://www.huya.com/+room_number" for recording')
 
+        live_url = 'https://www.huya.com/' + str(room_id)
+
         params = {
             'm': 'Live',
             'do': 'profileRoom',
@@ -81,12 +84,12 @@ class HuyaLiveStream(BaseLiveStream):
         anchor_name = json_data['data']['profileInfo']['nick']
         live_status = json_data['data']['realLiveStatus']
         if live_status != 'ON':
-            return {'anchor_name': anchor_name, 'is_live': False}
+            return {'anchor_name': anchor_name, 'is_live': False, 'live_url': live_url}
         else:
             live_title = json_data['data']['liveData']['introduction']
             live_type = json_data['data']['liveData']["gameHostName"]
             if live_type in ['lol']:
-                return await self.fetch_web_stream_data(url)
+                return await self.fetch_web_stream_data(live_url)
 
             base_steam_info_list = json_data['data']['stream']['baseSteamInfoList']
             play_url_list = []
@@ -128,7 +131,8 @@ class HuyaLiveStream(BaseLiveStream):
                 'm3u8_url': m3u8_url,
                 'flv_url': flv_url,
                 'record_url': flv_url or m3u8_url,
-                'title': live_title
+                'title': live_title,
+                'live_url': live_url
             }
 
     @staticmethod
@@ -144,11 +148,13 @@ class HuyaLiveStream(BaseLiveStream):
         live_title = game_live_info['introduction']
         stream_info_list = json_data['data'][0]['gameStreamInfoList']
         anchor_name = game_live_info.get('nick', '')
+        live_url = json_data.get('live_url')
 
         result = {
             "platform": platform,
             "anchor_name": anchor_name,
             "is_live": False,
+            "live_url": live_url
         }
 
         if stream_info_list:

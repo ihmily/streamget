@@ -37,7 +37,7 @@ class YiqiLiveStream(BaseLiveStream):
         json_str = await async_req(api_1, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data = json.loads(json_str)
         anchor_name = json_data["displayName"]
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         json_data = {
             'liveStreamID': room_id,
         }

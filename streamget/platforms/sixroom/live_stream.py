@@ -54,7 +54,7 @@ class SixRoomLiveStream(BaseLiveStream):
             return json_data
         flv_title = json_data['content']['liveinfo']['flvtitle']
         anchor_name = json_data['content']['roominfo']['alias']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if flv_title:
             flv_url = f'https://wlive.6rooms.com/httpflv/{flv_title}.flv'
             result |= {'is_live': True, 'flv_url': flv_url, 'record_url': flv_url}

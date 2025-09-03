@@ -37,7 +37,7 @@ class KwaiLiveStream(BaseLiveStream):
         except (AttributeError, IndexError, json.JSONDecodeError) as e:
             raise Exception(f"Failed to parse JSON data from {url}. Error: {e}")
 
-        result = {"type": 2, "is_live": False}
+        result = {"type": 2, "is_live": False, 'live_url': url}
 
         if 'errorType' in play_list or 'liveStream' not in play_list:
             error_msg = play_list['errorType']['title'] + play_list['errorType']['content']
@@ -74,6 +74,7 @@ class KwaiLiveStream(BaseLiveStream):
             "platform": platform,
             "anchor_name": json_data['anchor_name'],
             "is_live": live_status,
+            "live_url": json_data['live_url'],
         }
 
         if live_status:

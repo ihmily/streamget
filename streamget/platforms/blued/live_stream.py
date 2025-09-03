@@ -34,7 +34,7 @@ class BluedLiveStream(BaseLiveStream):
             return json_data
         anchor_name = json_data['userInfo']['name']
         live_status = json_data['userInfo']['onLive']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
 
         if live_status:
             m3u8_url = json_data['liveInfo']['liveUrl']

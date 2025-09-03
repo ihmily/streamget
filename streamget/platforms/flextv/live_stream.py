@@ -80,7 +80,7 @@ class FlexTVLiveStream(BaseLiveStream):
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
         user_id = url.split('/live')[0].rsplit('/', maxsplit=1)[-1]
-        result = {"anchor_name": '', "is_live": False}
+        result = {"anchor_name": '', "is_live": False, 'live_url': url}
         new_cookies = None
         try:
             url2 = f'https://www.ttinglive.com/channels/{user_id}/live'

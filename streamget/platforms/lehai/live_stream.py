@@ -22,7 +22,9 @@ class LehaiLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
-        return await self.stream.fetch_web_stream_data(url)
+        data = await self.stream.fetch_web_stream_data(url)
+        data['live_url'] = url
+        return data
 
     async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """

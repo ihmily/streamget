@@ -56,7 +56,7 @@ class YinboLiveStream(BaseLiveStream):
             stream_hls_domain = config_json_data['domainpullstream_hls']
             return stream_flv_domain, stream_hls_domain
 
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status == 1:
             flv_domain, hls_domain = await get_live_domain(url)
             live_id = room_data['liveID']

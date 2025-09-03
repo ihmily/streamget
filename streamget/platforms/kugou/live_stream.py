@@ -36,7 +36,7 @@ class KugouLiveStream(BaseLiveStream):
         json_str = await async_req(url=app_api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data = json.loads(json_str)
         anchor_name = json_data['data']['normalRoomInfo']['nickName']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if not anchor_name:
             raise RuntimeError(
                 "Music channel live rooms are not supported for recording, please switch to a different live room."

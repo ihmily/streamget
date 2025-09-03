@@ -103,7 +103,8 @@ class DouyuLiveStream(BaseLiveStream):
             return json_data
         result = {
             "anchor_name": json_data['room']['nickname'],
-            "is_live": False
+            "is_live": False,
+            "live_url": url
         }
         if json_data['room']['videoLoop'] == 0 and json_data['room']['show_status'] == 1:
             result["title"] = json_data['room']['room_name'].replace('&nbsp;', '')

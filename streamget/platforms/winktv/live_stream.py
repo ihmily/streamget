@@ -63,7 +63,7 @@ class WinkTVLiveStream(BaseLiveStream):
         }
 
         anchor_name, live_status = await self.get_winktv_bj_info(url)
-        result = {"anchor_name": anchor_name, "is_live": live_status}
+        result = {"anchor_name": anchor_name, "is_live": live_status, "live_url": url}
         if live_status:
             play_api = 'https://api.winktv.co.kr/v1/live/play'
             json_str = await async_req(url=play_api, proxy_addr=self.proxy_addr, headers=self.pc_headers, data=data)

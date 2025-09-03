@@ -86,6 +86,7 @@ The `Stream` object returned by `fetch_stream_url` has the following attributes:
 - **new_cookies**: Any new cookies obtained during the request.
 - **new_token**: Any new token obtained during the request.
 - **extra**: Any additional information.
+- **live_url**: The URL of the live streaming webpage.
 
 ### Example Stream Object
 
@@ -101,7 +102,8 @@ StreamData(
     record_url='https://example.com/xxxx.flv',
     new_cookies=None,
     new_token=None,
-    extra=None
+    extra=None,
+    live_url='https://example.com/xxxx'
 )
 ```
 

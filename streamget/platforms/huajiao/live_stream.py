@@ -111,7 +111,7 @@ class HuajiaoLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
-        result = {"anchor_name": "", "is_live": False}
+        result = {"anchor_name": "", "is_live": False, "live_url": url}
 
         if 'user/' in url:
             if not self.cookies:

@@ -70,6 +70,7 @@ class YYLiveStream(BaseLiveStream):
         json_str2 = await async_req(detail_api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data2 = json.loads(json_str2)
         json_data['title'] = json_data2['data']['roomName']
+        json_data['live_url'] = url
         return json_data
 
     @staticmethod
@@ -82,6 +83,8 @@ class YYLiveStream(BaseLiveStream):
             "platform": "YY直播",
             "anchor_name": anchor_name,
             "is_live": False,
+            "live_url": json_data.get('live_url')
+
         }
         if 'avp_info_res' in json_data:
             stream_line_addr = json_data['avp_info_res']['stream_line_addr']

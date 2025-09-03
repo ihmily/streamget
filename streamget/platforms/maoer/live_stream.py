@@ -36,7 +36,7 @@ class MaoerLiveStream(BaseLiveStream):
         if 'room' in json_data['info']:
             live_status = json_data['info']['room']['status']['broadcasting']
 
-        result = {"anchor_name": anchor_name, "is_live": live_status}
+        result = {"anchor_name": anchor_name, "is_live": live_status, "live_url": url}
         if live_status:
             stream_list = json_data['info']['room']['channel']
             m3u8_url = stream_list['hls_pull_url']

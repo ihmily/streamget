@@ -59,7 +59,7 @@ class LaixiuLiveStream(BaseLiveStream):
         anchor_name = room_data['nickname']
         live_status = room_data['playStatus'] == 0
 
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status:
             flv_url = room_data['playUrl']
             result |= {'is_live': True, 'flv_url': flv_url, 'record_url': flv_url}

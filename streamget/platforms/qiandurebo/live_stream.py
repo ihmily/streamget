@@ -28,7 +28,7 @@ class QiandureboLiveStream(BaseLiveStream):
         data = re.search('var user = (.*?)\r\n\\s+user\\.play_url', html_str, re.DOTALL).group(1)
         anchor_name = re.findall('"zb_nickname": "(.*?)",\r\n', data)
 
-        result = {"anchor_name": "", "is_live": False}
+        result = {"anchor_name": "", "is_live": False, "live_url": url}
         if len(anchor_name) > 0:
             result['anchor_name'] = anchor_name[0]
             play_url = re.findall('"play_url": "(.*?)",\r\n', data)

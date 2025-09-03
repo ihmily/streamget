@@ -41,7 +41,7 @@ class LangLiveStream(BaseLiveStream):
         live_info = json_data['data']['live_info']
         anchor_name = live_info['nickname']
         live_status = live_info['live_status']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status == 1:
             flv_url = json_data['data']['live_info']['liveurl']
             m3u8_url = json_data['data']['live_info']['liveurl_hls']

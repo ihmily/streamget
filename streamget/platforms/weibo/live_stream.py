@@ -36,7 +36,7 @@ class WeiboLiveStream(BaseLiveStream):
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
         room_id = ''
-        result = {"anchor_name": '', "is_live": False}
+        result = {"anchor_name": '', "is_live": False, "live_url": url}
         if 'show/' in url:
             room_id = url.split('?')[0].split('show/')[1]
         else:

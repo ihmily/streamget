@@ -80,7 +80,7 @@ class TwitCastingLiveStream(BaseLiveStream):
             movie_id = re.search('data-movie-id="(.*?)" data-audience-id', html_str)
             return f'{anchor.group(1).strip()}-{anchor.group(2)}-{movie_id.group(1)}', status.group(1), title.group(1)
 
-        result = {"anchor_name": '', "is_live": False}
+        result = {"anchor_name": '', "is_live": False, "live_url": url}
         new_cookie = None
         try:
             to_login = self.get_params(url, "login")

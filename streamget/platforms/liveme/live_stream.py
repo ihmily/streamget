@@ -69,7 +69,7 @@ class LiveMeLiveStream(BaseLiveStream):
         stream_data = json_data['data']['video_info']
         anchor_name = stream_data['uname']
         live_status = stream_data['status']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status == "0":
             m3u8_url = stream_data['hlsvideosource']
             flv_url = stream_data['videosource']

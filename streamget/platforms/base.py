@@ -121,8 +121,9 @@ class BaseLiveStream:
         video_quality, selected_quality = self.get_quality_index(video_quality)
         data = {
             "platform": platform,
-            "anchor_name": json_data['anchor_name'],
-            "is_live": True
+            "anchor_name": json_data.get('anchor_name'),
+            "is_live": True,
+            "live_url": json_data.get('live_url')
         }
 
         def get_url(key):

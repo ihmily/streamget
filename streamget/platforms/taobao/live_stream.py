@@ -82,7 +82,7 @@ class TaobaoLiveStream(BaseLiveStream):
             ret_msg = json_data['ret']
             if ret_msg == ['SUCCESS::调用成功']:
                 anchor_name = json_data['data']['broadCaster']['accountName']
-                result = {"anchor_name": anchor_name, "is_live": False}
+                result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
                 live_status = json_data['data']['streamStatus']
                 if live_status == '1':
                     live_title = json_data['data']['title']

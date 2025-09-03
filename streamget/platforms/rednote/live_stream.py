@@ -38,7 +38,7 @@ class RedNoteLiveStream(BaseLiveStream):
         host_id = self.get_params(url, "host_id")
         user_id = re.search("/user/profile/(.*?)(?=/|\\?|$)", url)
         user_id = user_id.group(1) if user_id else host_id
-        result = {"anchor_name": '', "is_live": False}
+        result = {"anchor_name": '', "is_live": False, "live_url": url}
         html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
         match_data = re.search("<script>window.__INITIAL_STATE__=(.*?)</script>", html_str)
 

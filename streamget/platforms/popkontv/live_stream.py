@@ -147,7 +147,7 @@ class PopkonTVLiveStream(BaseLiveStream):
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
         anchor_name, room_info = await self._get_room_info(url)
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         new_token = None
         if room_info:
             cast_start_date_code, cast_partner_code, mc_sign_id, cast_type, is_private = room_info

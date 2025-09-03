@@ -34,7 +34,7 @@ class ShopeeLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
-        result = {"anchor_name": "", "is_live": False}
+        result = {"anchor_name": "", "is_live": False, "live_url": url}
         is_living = False
 
         if 'live.shopee' not in url and 'uid' not in url:

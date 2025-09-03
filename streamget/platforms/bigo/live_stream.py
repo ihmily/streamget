@@ -52,7 +52,7 @@ class BigoLiveStream(BaseLiveStream):
             return json_data
         anchor_name = json_data['data']['nick_name']
         live_status = json_data['data']['alive']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
 
         if live_status == 1:
             live_title = json_data['data']['roomTopic']
@@ -71,7 +71,6 @@ class BigoLiveStream(BaseLiveStream):
                                               'content="(.*?) - BIGO LIVE">', html_str, re.DOTALL)
                 anchor_name = match_anchor_name.group(1)
             result['anchor_name'] = anchor_name
-
         return result
 
     @staticmethod

@@ -35,7 +35,7 @@ class ShowRoomLiveStream(BaseLiveStream):
         json_str = await async_req(info_api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data = json.loads(json_str)
         anchor_name = json_data['room_name']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         live_status = json_data['live_status']
         if live_status == 2:
             result["is_live"] = True

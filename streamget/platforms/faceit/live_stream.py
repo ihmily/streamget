@@ -35,7 +35,7 @@ class FaceitLiveStream(BaseLiveStream):
         json_str2 = await async_req(api2, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         json_data2 = json.loads(json_str2)
         if not json_data2.get('payload'):
-            return {'anchor_name': nickname, 'is_live': False}
+            return {'anchor_name': nickname, 'is_live': False, 'live_url': url}
         platform_info = json_data2['payload'][0]
         anchor_name = platform_info.get('userNickname')
         anchor_id = platform_info.get('platformId')
@@ -44,8 +44,9 @@ class FaceitLiveStream(BaseLiveStream):
             twitch_stream = TwitchLiveStream(proxy_addr=self.proxy_addr)
             result = await twitch_stream.fetch_web_stream_data(f'https://www.twitch.tv/{anchor_id}')
             result['anchor_name'] = anchor_name
+            result['live_url'] = url
         else:
-            result = {'anchor_name': anchor_name, 'is_live': False}
+            result = {'anchor_name': anchor_name, 'is_live': False, 'live_url': url}
         return result
 
     async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:

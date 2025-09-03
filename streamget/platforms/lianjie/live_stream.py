@@ -34,7 +34,7 @@ class LianJieLiveStream(BaseLiveStream):
         anchor_name = room_data['nickname']
         live_status = room_data['isonline']
 
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status == 1:
             title = room_data['defaultRoomTitle']
             webrtc_url = room_data['videoUrl']

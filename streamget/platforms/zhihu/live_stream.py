@@ -36,7 +36,7 @@ class ZhihuLiveStream(BaseLiveStream):
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
 
-        result = {"anchor_name": '', "is_live": False}
+        result = {"anchor_name": '', "is_live": False, "live_url": url}
         if 'people/' in url:
             user_id = url.split('people/')[1]
             api = f'https://api.zhihu.com/people/{user_id}/profile?profile_new_version='

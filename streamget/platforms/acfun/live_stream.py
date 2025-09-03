@@ -30,7 +30,7 @@ class AcfunLiveStream(BaseLiveStream):
         headers = {
             'referer': 'https://live.acfun.cn/',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
-            'cookie': f'_did={did};',
+            'cookie': f'_did={did}',
         }
         data = {
             'sid': 'acfun.api.visitor',
@@ -59,7 +59,7 @@ class AcfunLiveStream(BaseLiveStream):
         json_data = json.loads(json_str)
         anchor_name = json_data['profile']['name']
         status = 'liveId' in json_data['profile']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if status:
             result["is_live"] = True
             user_id, did, visitor_st = await self._get_acfun_sign_params()

@@ -48,7 +48,7 @@ class PandaLiveStream(BaseLiveStream):
             'shareLinkType': '',
         }
 
-        result = {"anchor_name": "", "is_live": False}
+        result = {"anchor_name": "", "is_live": False, "live_url": url}
         json_str = await async_req('https://api.pandalive.co.kr/v1/member/bj',
                                    proxy_addr=self.proxy_addr, headers=self.pc_headers, data=data)
         json_data = json.loads(json_str)

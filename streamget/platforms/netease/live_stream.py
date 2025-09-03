@@ -34,7 +34,7 @@ class NeteaseLiveStream(BaseLiveStream):
             return json_data
         room_data = json_data['props']['pageProps']['roomInfoInitData']
         live_data = room_data['live']
-        result = {"is_live": False}
+        result = {"is_live": False, "live_url": url}
         live_status = live_data.get('status') == 1
         result["anchor_name"] = live_data.get('nickname', room_data.get('nickname'))
         if live_status:

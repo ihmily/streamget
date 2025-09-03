@@ -54,7 +54,7 @@ class VVXQLiveStream(BaseLiveStream):
             json_data = json.loads(json_str)
             anchor_name = json_data['data']['memberVO']['memberName']
 
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         m3u8_url = f'https://liveplay-pro.wasaixiu.com/live/1400442770_{room_id}_{room_id[2:]}_single.m3u8'
         resp = await async_req(m3u8_url, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
         if 'Not Found' not in resp:

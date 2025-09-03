@@ -75,7 +75,7 @@ class HaixiuLiveStream(BaseLiveStream):
         stream_data = json_data['data']
         anchor_name = stream_data['nickname']
         live_status = stream_data['live_status']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status == 1:
             flv_url = stream_data['media_url_web']
             result |= {'is_live': True, 'flv_url': flv_url, 'record_url': flv_url}

@@ -21,7 +21,7 @@ class DouyinLiveStream(BaseLiveStream):
         return {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
             'accept-language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-            'cookie': self.cookies or '__ac_nonce=064caded4009deafd8b89;',
+            'cookie': self.cookies or '__ac_nonce=064caded4009deafd8b89',
             'referer': 'https://live.douyin.com/'
         }
 
@@ -56,9 +56,13 @@ class DouyinLiveStream(BaseLiveStream):
             else:
                 json_data = json.loads(json_str)['data']
                 room_data = json_data.get('room')
+
                 if not room_data:
                     raise Exception("VR live is not supported")
-                room_data['anchor_name'] = room_data['owner']['nickname']
+                owner_data = room_data['owner']
+                room_data['anchor_name'] = owner_data['nickname']
+                web_rid = owner_data.get('web_rid')
+                room_data['live_url'] = "https://live.douyin.com/" + str(web_rid) if web_rid else None
                 stream_data = room_data['stream_url']['live_core_sdk_data']['pull_data']['stream_data']
                 origin_data = json.loads(stream_data)['data']['origin']['main']
                 sdk_params = json.loads(origin_data['sdk_params'])
@@ -109,6 +113,7 @@ class DouyinLiveStream(BaseLiveStream):
             else:
                 json_data = json.loads(room_store)['roomInfo']['room']
                 json_data['anchor_name'] = anchor_name
+                json_data['live_url'] = url.split('?')[0]
                 if 'status' in json_data and json_data['status'] == 4:
                     return json_data
                 stream_orientation = json_data['stream_url']['stream_orientation']
@@ -144,7 +149,8 @@ class DouyinLiveStream(BaseLiveStream):
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
         anchor_name = json_data.get('anchor_name')
-        result = {"platform": "抖音", "anchor_name": anchor_name, "is_live": False}
+        live_url = json_data.get('live_url')
+        result = {"platform": "抖音", "anchor_name": anchor_name, "is_live": False, "live_url": live_url}
         status = json_data.get("status", 4)
         if status == 2:
             stream_url = json_data['stream_url']
@@ -170,6 +176,6 @@ class DouyinLiveStream(BaseLiveStream):
                 'quality': video_quality,
                 'm3u8_url': m3u8_url,
                 'flv_url': flv_url,
-                'record_url': m3u8_url or flv_url,
+                'record_url': m3u8_url or flv_url
             }
         return wrap_stream(result)

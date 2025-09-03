@@ -34,7 +34,7 @@ class PicartoLiveStream(BaseLiveStream):
         anchor_name = json_data['channel']['name']
         live_status = json_data['channel']['online']
 
-        result = {"anchor_name": anchor_name, "is_live": live_status}
+        result = {"anchor_name": anchor_name, "is_live": live_status, "live_url": url}
         if live_status:
             title = json_data['channel']['title']
             m3u8_url = f"https://1-edge1-us-newyork.picarto.tv/stream/hls/golive+{anchor_name}/index.m3u8"

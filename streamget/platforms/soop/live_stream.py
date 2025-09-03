@@ -137,7 +137,7 @@ class SoopLiveStream(BaseLiveStream):
         else:
             anchor_name = ''
 
-        result = {"anchor_name": anchor_name or '', "is_live": False}
+        result = {"anchor_name": anchor_name or '', "is_live": False, "live_url": url}
 
         async def get_url_list(m3u8: str) -> list[str]:
             resp = await async_req(url=m3u8, proxy_addr=self.proxy_addr, headers=self.pc_headers)

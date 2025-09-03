@@ -52,7 +52,7 @@ class PiaopaioLiveStream(BaseLiveStream):
         live_info = json_data['data']
         anchor_name = live_info['name']
         live_status = live_info['living']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status:
             m3u8_url = live_info['pullUrl']
             result |= {'is_live': True, 'm3u8_url': m3u8_url, 'record_url': m3u8_url}

@@ -96,7 +96,7 @@ class TwitchLiveStream(BaseLiveStream):
         sign = json_data['data']['streamPlaybackAccessToken']['signature']
 
         anchor_name, live_status = await self.get_twitchtv_room_info(url.strip())
-        result = {"anchor_name": anchor_name, "is_live": live_status}
+        result = {"anchor_name": anchor_name, "is_live": live_status, "live_url": url}
         if live_status:
             play_session_id = random.choice(["bdd22331a986c7f1073628f2fc5b19da", "064bc3ff1722b6f53b0b5b8c01e46ca5"])
             params = {

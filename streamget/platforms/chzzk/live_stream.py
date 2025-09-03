@@ -41,7 +41,7 @@ class ChzzkLiveStream(BaseLiveStream):
         anchor_name = live_data['channel']['channelName']
         live_status = live_data['status']
 
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status == 'OPEN':
             play_data = json.loads(live_data['livePlaybackJson'])
             m3u8_url = play_data['media'][0]['path']

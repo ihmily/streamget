@@ -23,6 +23,7 @@ class StreamData:
         new_cookies (str): Updated cookies required for accessing the stream.
         new_token (str): Updated token required for accessing the stream.
         extra (dict): Additional metadata or custom fields.
+        live_url (str): The URL of the live room.
 
     Example:
         >>> stream_data = StreamData(platform="Twitch", anchor_name="StreamerName", is_live=True, title="Live Title")
@@ -44,6 +45,7 @@ class StreamData:
     new_cookies: str = None
     new_token: str = None
     extra: dict = None
+    live_url: str = None
 
     def to_json(self) -> str:
         """
@@ -96,7 +98,9 @@ def wrap_stream(data: dict) -> StreamData:
     if not isinstance(data, dict):
         raise TypeError("Input must be a dictionary")
 
-    required_fields = ["platform", "anchor_name", "is_live", "title", "quality", "m3u8_url", "flv_url", "record_url"]
+    required_fields = [
+        "platform", "anchor_name", "is_live", "title", "quality", "m3u8_url", "flv_url", "record_url", "live_url"
+    ]
     optional_fields = ["new_cookies", "new_token"]
 
     for field in required_fields + optional_fields:

@@ -37,7 +37,7 @@ class JDLiveStream(BaseLiveStream):
         """
         redirect_url = await async_req(url, proxy_addr=self.proxy_addr, headers=self.mobile_headers, redirect_url=True)
         author_id = self.get_params(redirect_url, 'authorId')
-        result = {"anchor_name": '', "is_live": False}
+        result = {"anchor_name": '', "is_live": False, "live_url": url}
         if not author_id:
             live_id = re.search('#/(.*?)\\?origin', redirect_url)
             if not live_id:

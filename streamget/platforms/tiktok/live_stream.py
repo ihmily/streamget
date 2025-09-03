@@ -47,14 +47,20 @@ class TikTokLiveStream(BaseLiveStream):
             if not json_str:
                 raise ConnectionError("Please check if your network can access the TikTok website normally")
             json_data = json.loads(json_str[0])
+            json_data['live_url'] = url
             return json_data
+        return {'live_url': url}
 
     async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
         if not json_data:
-            return wrap_stream({"platform": "TikTok", "anchor_name": None, "is_live": False})
+            return wrap_stream({})
+
+        live_url = json_data.get("live_url")
+        if 'LiveRoom' not in json_data:
+            return wrap_stream({"platform": "TikTok", "anchor_name": None, "is_live": False, "live_url": live_url})
 
         def get_video_quality_url(stream, q_key) -> list:
             play_list = []
@@ -88,6 +94,7 @@ class TikTokLiveStream(BaseLiveStream):
             "platform": "TikTok",
             "anchor_name": anchor_name,
             "is_live": False,
+            "live_url": live_url
         }
 
         if status == 2:
@@ -123,6 +130,6 @@ class TikTokLiveStream(BaseLiveStream):
                 'quality': video_quality,
                 'm3u8_url': m3u8_url,
                 'flv_url': flv_url,
-                'record_url': m3u8_url or flv_url,
+                'record_url': m3u8_url or flv_url
             }
         return wrap_stream(result)

@@ -121,7 +121,8 @@ class BilibiliLiveStream(BaseLiveStream):
             anchor_name = anchor_info['data']['info']['uname']
 
             title = await self._get_bilibili_room_info_h5(url)
-            return {"anchor_name": anchor_name, "live_status": live_status, "room_url": url, "title": title}
+            live_url = 'https://live.bilibili.com/' + str(room_id)
+            return {"anchor_name": anchor_name, "live_status": live_status, "room_url": live_url, "title": title}
         except Exception as e:
             print(e)
             return {"anchor_name": '', "live_status": False, "room_url": url}
@@ -135,11 +136,13 @@ class BilibiliLiveStream(BaseLiveStream):
         containing all relevant information.
         """
         platform = "哔哩哔哩"
-        anchor_name = json_data["anchor_name"]
-        if not json_data["live_status"]:
-            return wrap_stream({"platform": platform, "anchor_name": anchor_name, "is_live": False})
+        anchor_name = json_data.get('anchor_name')
+        room_url = json_data.get('room_url')
 
-        room_url = json_data['room_url']
+        if not json_data["live_status"]:
+            return wrap_stream(
+                {"platform": platform, "anchor_name": anchor_name, "is_live": False, "live_url": room_url}
+            )
 
         video_quality_options = {
             "OD": '10000',
@@ -167,6 +170,7 @@ class BilibiliLiveStream(BaseLiveStream):
             'is_live': True,
             'title': json_data['title'],
             'quality': video_quality,
-            'record_url': play_url
+            'record_url': play_url,
+            'live_url': room_url
         }
         return wrap_stream(data)

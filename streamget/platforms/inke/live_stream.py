@@ -44,7 +44,7 @@ class InkeLiveStream(BaseLiveStream):
         anchor_name = json_data['data']['media_info']['nick']
         live_status = json_data['data']['status']
 
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status == 1:
             m3u8_url = json_data['data']['live_addr'][0]['hls_stream_addr']
             flv_url = json_data['data']['live_addr'][0]['stream_addr']

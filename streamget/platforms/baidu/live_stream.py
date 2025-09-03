@@ -58,7 +58,7 @@ class BaiduLiveStream(BaseLiveStream):
         key = list(json_data['data'].keys())[0]
         data = json_data['data'][key]
         anchor_name = data['host']['name']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if data['status'] == "0":
             result["is_live"] = True
             live_title = data['video']['title']

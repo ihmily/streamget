@@ -94,7 +94,7 @@ class LookLiveStream(BaseLiveStream):
             return json_data
         anchor_name = json_data['data']['anchor']['nickName']
         live_status = json_data['data']['liveStatus']
-        result = {"anchor_name": anchor_name, "is_live": False}
+        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
         if live_status == 1:
             result["is_live"] = True
             if json_data['data']['roomInfo']['liveType'] != 1:
