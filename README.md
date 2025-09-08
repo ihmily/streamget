@@ -6,6 +6,7 @@
 <p align="center">
 <img alt="Python version" src="https://img.shields.io/badge/python-3.10%2B-blue.svg">
 <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/streamget?color=green">
+<img alt="Pepy Total Downloads" src="https://img.shields.io/pepy/dt/streamget">
 </p>
 
 
