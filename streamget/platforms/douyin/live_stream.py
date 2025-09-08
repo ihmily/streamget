@@ -12,8 +12,9 @@ class DouyinLiveStream(BaseLiveStream):
     """
     A class for fetching and processing Douyin live stream information.
     """
-    def __init__(self, proxy_addr: str | None = None, cookies: str | None = None):
+    def __init__(self, proxy_addr: str | None = None, cookies: str | None = None, stream_orientation: int | None = 1):
         super().__init__(proxy_addr, cookies)
+        self.stream_orientation = stream_orientation
         self.mobile_headers = self._get_mobile_headers()
         self.pc_headers = self._get_pc_headers()
 
@@ -24,6 +25,114 @@ class DouyinLiveStream(BaseLiveStream):
             'cookie': self.cookies or '__ac_nonce=064caded4009deafd8b89',
             'referer': 'https://live.douyin.com/'
         }
+
+    @staticmethod
+    def sort_streams_by_bitrate(data):
+
+        streams = []
+
+        for quality, stream_info in data.items():
+            try:
+                main = stream_info.get("main")
+                if not main:
+                    continue
+
+                sdk_params_str = main.get("sdk_params")
+                if not sdk_params_str:
+                    continue
+
+                sdk_params = json.loads(sdk_params_str) if isinstance(sdk_params_str, str) else sdk_params_str
+                vbitrate = sdk_params.get("vbitrate")
+                if not isinstance(vbitrate, (int, float)) or vbitrate <= 0:
+                    continue
+
+                flv_url = main.get("flv", "")
+                hls_url = main.get("hls", "")
+
+                if not flv_url and not hls_url:
+                    continue
+
+                streams.append({
+                    "name": quality,
+                    "bitrate": int(vbitrate),
+                    "flv": flv_url,
+                    "hls": hls_url
+                })
+
+            except (json.JSONDecodeError, Exception) as _:
+                continue
+
+        sorted_streams = sorted(streams, key=lambda x: x["bitrate"], reverse=True)
+        return sorted_streams
+
+    async def _get_web_stream_data(self, web_rid: str, process_data: bool = True):
+        headers = {
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
+            'accept-language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+            'cookie': 'ttwid=1%7CLAOiG67XxtjE2IQz04Hy-v5HcWLaBb0xKxcGI2Kfezg%7C1757134101'
+                      '%7C1256b68c29b63c9d830b144cc13aa64c1d6198e089658177977757ea20923265',
+            'referer': 'https://live.douyin.com/'
+        }
+        if self.cookies and 'ttwid=' in self.cookies:
+            headers['cookie'] = self.cookies
+
+        params = {
+            "aid": "6383",
+            "app_name": "douyin_web",
+            "live_id": "1",
+            "device_platform": "web",
+            "language": "zh-CN",
+            "browser_language": "zh-CN",
+            "browser_platform": "Win32",
+            "browser_name": "Chrome",
+            "browser_version": "116.0.0.0",
+            "web_rid": web_rid,
+            'is_need_double_stream': 'false',
+            'msToken': '',
+            'a_bogus': ''
+        }
+        api = 'https://live.douyin.com/webcast/room/web/enter/?' + urllib.parse.urlencode(params)
+        json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=headers)
+        if not process_data:
+            return json.loads(json_str)
+        else:
+            json_data = json.loads(json_str)['data']
+            if not json_data.get('data'):
+                raise Exception("live data fetch error")
+            room_data = json_data['data'][0]
+            room_data['anchor_name'] = json_data['user']['nickname']
+            room_data['live_url'] = "https://live.douyin.com/" + str(web_rid)
+
+            if room_data.get('status') == 4:
+                return room_data
+            stream_orientation = room_data['stream_url']['stream_orientation']
+            pull_datas = room_data['stream_url'].get('pull_datas')
+            orientation = 2 if stream_orientation == 2 and self.stream_orientation == 2 and pull_datas else 1
+
+            if orientation == 2:
+                stream_data_str = list(room_data['stream_url']['pull_datas'].values())[0]['stream_data']
+                stream_data = json.loads(stream_data_str)
+                sorted_stream_data = self.sort_streams_by_bitrate(stream_data["data"])
+                hls_pull_url_map = {}
+                flv_pull_url_map = {}
+                for i in sorted_stream_data:
+                    hls_pull_url_map[i["name"]] = i['hls']
+                    flv_pull_url_map[i["name"]] = i['flv']
+                    room_data['stream_url']['hls_pull_url_map'] = hls_pull_url_map
+                    room_data['stream_url']['flv_pull_url'] = flv_pull_url_map
+                return room_data
+            else:
+                stream_data = room_data['stream_url']['live_core_sdk_data']['pull_data']['stream_data']
+                origin_data = json.loads(stream_data)['data']['origin']['main']
+                sdk_params = json.loads(origin_data['sdk_params'])
+                origin_hls_codec = sdk_params.get('VCodec') or ''
+                origin_m3u8 = {'ORIGIN': origin_data["hls"] + '&codec=' + origin_hls_codec}
+                origin_flv = {'ORIGIN': origin_data["flv"] + '&codec=' + origin_hls_codec}
+                hls_pull_url_map = room_data['stream_url']['hls_pull_url_map']
+                flv_pull_url = room_data['stream_url']['flv_pull_url']
+                room_data['stream_url']['hls_pull_url_map'] = {**origin_m3u8, **hls_pull_url_map}
+                room_data['stream_url']['flv_pull_url'] = {**origin_flv, **flv_pull_url}
+                return room_data
 
     async def fetch_app_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
@@ -39,6 +148,12 @@ class DouyinLiveStream(BaseLiveStream):
         url = url.strip()
         douyin_utils = DouyinUtils()
         try:
+            if self.stream_orientation == 2:
+                html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+                web_rid = re.search('webRid(.*?)desensitizedNickname', html_str).group(1)
+                web_rid = re.search(r'(\d+)', web_rid).group(1)
+                return await self._get_web_stream_data(web_rid, process_data)
+
             room_id, sec_uid = await douyin_utils.get_sec_user_id(url, proxy_addr=self.proxy_addr)
             app_params = {
                 "verifyFp": "verify_lxj5zv70_7szNlAB7_pxNY_48Vh_ALKF_GA1Uf3yteoOY",
@@ -47,7 +162,8 @@ class DouyinLiveStream(BaseLiveStream):
                 "room_id": room_id,
                 "sec_user_id": sec_uid,
                 "version_code": "99.99.99",
-                "app_id": "1128"
+                "app_id": "1128",
+                "is_need_double_stream": True
             }
             api = 'https://webcast.amemv.com/webcast/room/reflow/info/?' + urllib.parse.urlencode(app_params)
             json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
@@ -114,31 +230,51 @@ class DouyinLiveStream(BaseLiveStream):
                 json_data = json.loads(room_store)['roomInfo']['room']
                 json_data['anchor_name'] = anchor_name
                 json_data['live_url'] = url.split('?')[0]
-                if 'status' in json_data and json_data['status'] == 4:
+                if json_data.get('status') == 4:
                     return json_data
                 stream_orientation = json_data['stream_url']['stream_orientation']
                 match_json_str2 = re.findall(r'"(\{\\"common\\":.*?)"]\)</script><script nonce=', html_str)
-                if match_json_str2:
-                    json_str = match_json_str2[0] if stream_orientation == 1 else match_json_str2[1]
-                    json_data2 = json.loads(
+                orientation = 2 if stream_orientation == 2 and self.stream_orientation == 2 else 1
+
+                if match_json_str2 and orientation == 2 and len(match_json_str2) > 1:
+                    json_str = match_json_str2[1]
+                    json_str2 = json.loads(
                         json_str.replace('\\', '').replace('"{', '{').replace('}"', '}').replace('u0026', '&'))
-                    if 'origin' in json_data2['data']:
-                        origin_url_list = json_data2['data']['origin']['main']
+
+                    sorted_stream_data = self.sort_streams_by_bitrate(json_str2["data"])
+                    hls_pull_url_map = {}
+                    flv_pull_url_map = {}
+                    for i in sorted_stream_data:
+                        hls_pull_url_map[i["name"]] = i['hls']
+                        flv_pull_url_map[i["name"]] = i['flv']
+                        json_data['stream_url']['hls_pull_url_map'] = hls_pull_url_map
+                        json_data['stream_url']['flv_pull_url'] = flv_pull_url_map
+                    return json_data
 
                 else:
-                    html_str = html_str.replace('\\', '').replace('u0026', '&')
-                    match_json_str3 = re.search('"origin":\\{"main":(.*?),"dash"', html_str, re.DOTALL)
-                    if match_json_str3:
-                        origin_url_list = json.loads(match_json_str3.group(1) + '}')
+                    if match_json_str2:
+                        json_str = match_json_str2[0]
+                        json_data2 = json.loads(
+                            json_str.replace('\\', '').replace('"{', '{').replace('}"', '}').replace('u0026', '&'))
 
-                if origin_url_list:
-                    origin_hls_codec = origin_url_list['sdk_params'].get('VCodec') or ''
-                    origin_m3u8 = {'ORIGIN': origin_url_list["hls"] + '&codec=' + origin_hls_codec}
-                    origin_flv = {'ORIGIN': origin_url_list["flv"] + '&codec=' + origin_hls_codec}
-                    hls_pull_url_map = json_data['stream_url']['hls_pull_url_map']
-                    flv_pull_url = json_data['stream_url']['flv_pull_url']
-                    json_data['stream_url']['hls_pull_url_map'] = {**origin_m3u8, **hls_pull_url_map}
-                    json_data['stream_url']['flv_pull_url'] = {**origin_flv, **flv_pull_url}
+                        if 'origin' in json_data2['data']:
+                            origin_url_list = json_data2['data']['origin']['main']
+
+                    else:
+                        html_str = html_str.replace('\\', '').replace('u0026', '&')
+                        match_json_str3 = re.search('"origin":\\{"main":(.*?),"dash"', html_str, re.DOTALL)
+                        if match_json_str3:
+                            origin_url_list = json.loads(match_json_str3.group(1) + '}')
+
+                    if origin_url_list:
+                        origin_hls_codec = origin_url_list['sdk_params'].get('VCodec') or ''
+                        origin_m3u8 = {'ORIGIN': origin_url_list["hls"] + '&codec=' + origin_hls_codec}
+                        origin_flv = {'ORIGIN': origin_url_list["flv"] + '&codec=' + origin_hls_codec}
+                        hls_pull_url_map = json_data['stream_url']['hls_pull_url_map']
+                        flv_pull_url = json_data['stream_url']['flv_pull_url']
+                        json_data['stream_url']['hls_pull_url_map'] = {**origin_m3u8, **hls_pull_url_map}
+                        json_data['stream_url']['flv_pull_url'] = {**origin_flv, **flv_pull_url}
+
             return json_data
 
         except Exception as e:
