@@ -38,7 +38,7 @@ class BilibiliLiveStream(BaseLiveStream):
     async def _get_bilibili_room_info_h5(self, url: str) -> str:
         room_id = url.split('?')[0].rsplit('/', maxsplit=1)[1]
         api = f'https://api.live.bilibili.com/xlive/web-room/v1/index/getH5InfoByRoom?room_id={room_id}'
-        json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+        json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.pc_headers)
         room_info = json.loads(json_str)
         title = room_info['data']['room_info']['title'] if room_info.get('data') else ''
         return title
