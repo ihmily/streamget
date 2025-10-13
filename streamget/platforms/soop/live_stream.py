@@ -28,7 +28,7 @@ class SoopLiveStream(BaseLiveStream):
         }
 
     async def login_sooplive(self) -> str | None:
-        if len(self.username) < 6 or len(self.password) < 10:
+        if self.username and self.password and len(self.username) < 6 or len(self.password) < 10:
             raise RuntimeError("sooplive login failed! Please enter the correct account and password for the sooplive "
                                "platform in the config.ini file.")
 
@@ -46,7 +46,7 @@ class SoopLiveStream(BaseLiveStream):
         url = 'https://login.sooplive.co.kr/app/LoginAction.php'
 
         try:
-            _, cookie_dict = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers,
+            cookie_dict = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers,
                                           data=data, return_cookies=True, timeout=20)
             self.cookies = '; '.join([f"{k}={v}" for k, v in cookie_dict.items()])
             self.pc_headers['cookie'] = self.cookies
