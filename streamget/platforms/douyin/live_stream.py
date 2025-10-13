@@ -110,6 +110,7 @@ class DouyinLiveStream(BaseLiveStream):
             orientation = 2 if stream_orientation == 2 and self.stream_orientation == 2 and pull_datas else 1
 
             if orientation == 2:
+                room_data['stream_orientation'] = 2
                 stream_data_str = list(room_data['stream_url']['pull_datas'].values())[0]['stream_data']
                 stream_data = json.loads(stream_data_str)
                 sorted_stream_data = self.sort_streams_by_bitrate(stream_data["data"])
@@ -122,6 +123,7 @@ class DouyinLiveStream(BaseLiveStream):
                     room_data['stream_url']['flv_pull_url'] = flv_pull_url_map
                 return room_data
             else:
+                room_data['stream_orientation'] = 1
                 stream_data = room_data['stream_url']['live_core_sdk_data']['pull_data']['stream_data']
                 origin_data = json.loads(stream_data)['data']['origin']['main']
                 sdk_params = json.loads(origin_data['sdk_params'])
@@ -133,6 +135,70 @@ class DouyinLiveStream(BaseLiveStream):
                 room_data['stream_url']['hls_pull_url_map'] = {**origin_m3u8, **hls_pull_url_map}
                 room_data['stream_url']['flv_pull_url'] = {**origin_flv, **flv_pull_url}
                 return room_data
+
+    async def _get_app_web_stream_data(self, url: str, process_data: bool = True):
+        html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+        match_json_str = re.search(
+            '</script><script >self.__rsc_f.push\\(\\[1,"(\\{.*?)"]\\)</script><script >self.__rsc_f.push', html_str)
+
+        if not match_json_str:
+            raise Exception("Fetch stream data error")
+
+        json_str = match_json_str.group(1)
+        cleaned_string = json_str.replace('\\', '').replace(r'u0026', r'&').replace(
+            '"sdk_params":"', '"sdk_params":').replace('","enableEncryption', ',"enableEncryption')
+        cleaned_string = '{"data":' + cleaned_string.split(',"data":')[1]
+        json_data = json.loads(cleaned_string)
+
+        json_str2 = re.findall('</script><script >self.__rsc_f.push\\(\\[1,"5(.*?)</script>$', html_str)[-1]
+        json_str2 = json_str2.replace('\\\\\\"', '"').replace('\\"', '"').replace('"{', '{').replace('}"', '}')
+        json_str2 = json_str2.split(':["$","$L7",null,', maxsplit=1)[-1].split(']\\n"])', maxsplit=1)[0]
+        json_data2 = json.loads(json_str2)
+
+        if not process_data:
+            return json_data2
+
+        room_data = json_data2['data']['room']
+        room_data['anchor_name'] = room_data['owner']['nickname']
+        room_data['live_url'] = "http://live.douyin.com/live/" + room_data['owner']['webRid']
+
+        if room_data.get('status') == 4:
+            return room_data
+
+        stream_url = room_data['streamUrl']
+        stream_orientation = stream_url['streamOrientation']
+        pull_datas = stream_url.get('pullDatas')
+        orientation = 2 if stream_orientation == 2 and self.stream_orientation == 2 and pull_datas else 1
+
+        if orientation == 2:
+            room_data['stream_orientation'] = 2
+            stream_data_str = list(pull_datas.values())[0]['streamData']
+            stream_data = json.loads(stream_data_str)
+            sorted_stream_data = self.sort_streams_by_bitrate(stream_data["data"])
+            hls_pull_url_map = {}
+            flv_pull_url_map = {}
+            for i in sorted_stream_data:
+                hls_pull_url_map[i["name"]] = i['hls']
+                flv_pull_url_map[i["name"]] = i['flv']
+                room_data['stream_url']['hls_pull_url_map'] = hls_pull_url_map
+                room_data['stream_url']['flv_pull_url'] = flv_pull_url_map
+            return room_data
+        else:
+            room_data['stream_orientation'] = 1
+            stream_data = stream_url['liveCoreSdkData']['pullData']['streamData']
+            if orientation == 1 and not stream_data.startswith('$'):
+                origin_data = json.loads(stream_data)['data']['origin']['main']
+            else:
+                origin_data = json_data['data']['origin']['main']
+            sdk_params = origin_data['sdk_params']
+            origin_hls_codec = sdk_params.get('VCodec') or ''
+            origin_m3u8 = {'ORIGIN': origin_data["hls"] + '&codec=' + origin_hls_codec}
+            origin_flv = {'ORIGIN': origin_data["flv"] + '&codec=' + origin_hls_codec}
+            hls_pull_url_map = stream_url['hlsPullUrlMap']
+            flv_pull_url = stream_url['flvPullUrl']
+            room_data['streamUrl']['hlsPullUrlMap'] = {**origin_m3u8, **hls_pull_url_map}
+            room_data['streamUrl']['flvPullUrl'] = {**origin_flv, **flv_pull_url}
+            return room_data
 
     async def fetch_app_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
@@ -149,10 +215,11 @@ class DouyinLiveStream(BaseLiveStream):
         douyin_utils = DouyinUtils()
         try:
             if self.stream_orientation == 2:
-                html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
-                web_rid = re.search('webRid(.*?)desensitizedNickname', html_str).group(1)
-                web_rid = re.search(r'(\d+)', web_rid).group(1)
-                return await self._get_web_stream_data(web_rid, process_data)
+                return await self._get_app_web_stream_data(url, process_data)
+                # html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+                # web_rid = re.search('webRid(.*?)desensitizedNickname', html_str).group(1)
+                # web_rid = re.search(r'(\d+)', web_rid).group(1)
+                # return await self._get_web_stream_data(web_rid, process_data)
 
             room_id, sec_uid = await douyin_utils.get_sec_user_id(url, proxy_addr=self.proxy_addr)
             app_params = {
@@ -179,6 +246,10 @@ class DouyinLiveStream(BaseLiveStream):
                 room_data['anchor_name'] = owner_data['nickname']
                 web_rid = owner_data.get('web_rid')
                 room_data['live_url'] = "https://live.douyin.com/" + str(web_rid) if web_rid else None
+
+                if room_data.get('status') == 4:
+                    return room_data
+
                 stream_data = room_data['stream_url']['live_core_sdk_data']['pull_data']['stream_data']
                 origin_data = json.loads(stream_data)['data']['origin']['main']
                 sdk_params = json.loads(origin_data['sdk_params'])
@@ -189,6 +260,7 @@ class DouyinLiveStream(BaseLiveStream):
                 flv_pull_url = room_data['stream_url']['flv_pull_url']
                 room_data['stream_url']['hls_pull_url_map'] = {**origin_m3u8, **hls_pull_url_map}
                 room_data['stream_url']['flv_pull_url'] = {**origin_flv, **flv_pull_url}
+                room_data['stream_orientation'] = 1
                 return room_data
 
         except UnsupportedUrlError:
@@ -249,6 +321,8 @@ class DouyinLiveStream(BaseLiveStream):
                         flv_pull_url_map[i["name"]] = i['flv']
                         json_data['stream_url']['hls_pull_url_map'] = hls_pull_url_map
                         json_data['stream_url']['flv_pull_url'] = flv_pull_url_map
+
+                    json_data['stream_orientation'] = 2
                     return json_data
 
                 else:
@@ -275,6 +349,8 @@ class DouyinLiveStream(BaseLiveStream):
                         json_data['stream_url']['hls_pull_url_map'] = {**origin_m3u8, **hls_pull_url_map}
                         json_data['stream_url']['flv_pull_url'] = {**origin_flv, **flv_pull_url}
 
+                    json_data['stream_orientation'] = 1
+
             return json_data
 
         except Exception as e:
@@ -286,13 +362,14 @@ class DouyinLiveStream(BaseLiveStream):
         """
         anchor_name = json_data.get('anchor_name')
         live_url = json_data.get('live_url')
-        result = {"platform": "抖音", "anchor_name": anchor_name, "is_live": False, "live_url": live_url}
+        result = {"platform": "抖音", "anchor_name": anchor_name, "is_live": False, "live_url": live_url,
+                  "extra": {"stream_orientation": json_data.get('stream_orientation')}}
         status = json_data.get("status", 4)
         if status == 2:
-            stream_url = json_data['stream_url']
-            flv_url_dict = stream_url['flv_pull_url']
+            stream_url = json_data.get('stream_url', json_data.get('streamUrl'))
+            flv_url_dict = stream_url.get('flv_pull_url', stream_url.get('flvPullUrl'))
             flv_url_list: list = list(flv_url_dict.values())
-            m3u8_url_dict = stream_url['hls_pull_url_map']
+            m3u8_url_dict = stream_url.get('hls_pull_url_map', stream_url.get('hlsPullUrlMap'))
             m3u8_url_list: list = list(m3u8_url_dict.values())
             while len(flv_url_list) < 5:
                 flv_url_list.append(flv_url_list[-1])
