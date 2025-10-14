@@ -142,7 +142,7 @@ class HuyaLiveStream(BaseLiveStream):
          """
         platform = "虎牙直播"
         if 'is_live' in json_data:
-            json_data |= {"platform": platform}
+            json_data |= {"platform": platform, "quality": video_quality}
             return wrap_stream(json_data)
         game_live_info = json_data['data'][0]['gameLiveInfo']
         live_title = game_live_info['introduction']
@@ -178,7 +178,7 @@ class HuyaLiveStream(BaseLiveStream):
                 sdk_sid = t13
 
                 # 计算uuid和uid参数值
-                init_uuid = (int(t13 % 10 ** 10 * 1000) + int(1000 * random.random())) % 4294967295  # 直接初始化
+                init_uuid = (int(t13 % 10 ** 10 * 1000) + int(1000 * random.random())) % 4294967295
                 uid = random.randint(1400000000000, 1400009999999)  # 经过测试uid也可以使用init_uuid代替
                 seq_id = uid + sdk_sid  # 移动端请求的直播流地址中包含seqId参数
 
