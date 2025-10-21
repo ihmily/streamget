@@ -39,11 +39,11 @@ class TaobaoLiveStream(BaseLiveStream):
         if '_m_h5_tk' not in self.pc_headers['cookie']:
             raise Exception('Error: Cookies is empty! please input correct cookies')
 
-        live_id = self.get_params(url, 'id')
+        live_id = self.get_params(url, 'id') or self.get_params(url, 'liveId')
         if not live_id:
             html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
             redirect_url = re.findall("var url = '(.*?)';", html_str)[0]
-            live_id = self.get_params(redirect_url, 'id')
+            live_id = self.get_params(redirect_url, 'id') or self.get_params(url, 'liveId')
 
         params = {
             'jsv': '2.7.0',
@@ -73,7 +73,8 @@ class TaobaoLiveStream(BaseLiveStream):
             except execjs.ProgramError:
                 raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
             params |= {'sign': sign, 't': t13}
-            api = f'https://h5api.m.taobao.com/h5/mtop.mediaplatform.live.livedetail/4.0/?{urllib.parse.urlencode(params)}'
+            api = 'https://h5api.m.taobao.com/h5/mtop.mediaplatform.live.livedetail/4.0/?' + \
+                  urllib.parse.urlencode(params)
             jsonp_str, new_cookie = await async_req(url=api, proxy_addr=self.proxy_addr, headers=self.pc_headers,
                                                     timeout=20, return_cookies=True, include_cookies=True)
             json_data = utils.jsonp_to_json(jsonp_str)
@@ -82,7 +83,8 @@ class TaobaoLiveStream(BaseLiveStream):
             ret_msg = json_data['ret']
             if ret_msg == ['SUCCESS::调用成功']:
                 anchor_name = json_data['data']['broadCaster']['accountName']
-                result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
+                live_url = 'https://tbzb.taobao.com/live?liveId=' + live_id
+                result = {"anchor_name": anchor_name, "is_live": False, "live_url": live_url}
                 live_status = json_data['data']['streamStatus']
                 if live_status == '1':
                     live_title = json_data['data']['title']
@@ -97,7 +99,7 @@ class TaobaoLiveStream(BaseLiveStream):
                         return priority
 
                     play_url_list = sorted(play_url_list, key=get_sort_key, reverse=True)
-                    result |= {"is_live": True, "title": live_title, "play_url_list": play_url_list, 'live_id': live_id}
+                    result |= {"is_live": True, "title": live_title, "play_url_list": play_url_list}
 
                 return result
             else:
