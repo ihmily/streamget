@@ -1,6 +1,5 @@
 import math
 import time
-from typing import List
 
 
 def rc4_encrypt(plaintext: str, key: str) -> str:
@@ -78,7 +77,7 @@ class SM3:
         # 将输入转换为字节数组
         if isinstance(data, str):
             # 直接转换为UTF-8字节列表
-            a = [b for b in data.encode('utf-8')]
+            a = list(data.encode('utf-8'))
         else:
             a = data
 
@@ -209,7 +208,7 @@ class SM3:
         return result
 
 
-def result_encrypt(long_str: str, num: str = None) -> str:
+def result_encrypt(long_str: str, num: str | None = None) -> str:
     # 魔改base64编码表
     encoding_tables = {
         "s0": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
@@ -259,7 +258,7 @@ def get_long_int(round_num: int, long_str: str) -> int:
     return (char1 << 16) | (char2 << 8) | char3
 
 
-def gener_random(random_num: int, option: List[int]) -> List[int]:
+def gener_random(random_num: int, option: list[int]) -> list[int]:
     byte1 = random_num & 255
     byte2 = (random_num >> 8) & 255
 
@@ -291,7 +290,7 @@ def generate_random_str() -> str:
 
 
 def generate_rc4_bb_str(url_search_params: str, user_agent: str, window_env_str: str,
-                        suffix: str = "cus", arguments: List[int] = None) -> str:
+                        suffix: str = "cus", arguments: list[int] | None = None) -> str:
     if arguments is None:
         arguments = [0, 1, 14]
 
@@ -312,13 +311,13 @@ def generate_rc4_bb_str(url_search_params: str, user_agent: str, window_env_str:
 
     end_time = start_time + 100
 
-    # 构建配置对象(都可以省略, 非必须项)
+    # 构建配置对象
     b = {
         8: 3,
         10: end_time,
         15: {
             "aid": 6383,
-            "pageId": 0,
+            "pageId": 110624,
             "boe": False,
             "ddrt": 7,
             "paths": {
@@ -331,14 +330,14 @@ def generate_rc4_bb_str(url_search_params: str, user_agent: str, window_env_str:
                 "paths": []
             },
             "dump": True,
-            "rpU": ""
+            "rpU": "hwj"
         },
         16: start_time,
         18: 44,
         19: [1, 0, 1, 5],
     }
 
-    def split_to_bytes(num: int) -> List[int]:
+    def split_to_bytes(num: int) -> list[int]:
         return [
             (num >> 24) & 255,
             (num >> 16) & 255,

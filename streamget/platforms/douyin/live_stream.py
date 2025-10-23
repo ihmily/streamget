@@ -5,8 +5,8 @@ import urllib.parse
 from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req, get_response_status
 from ..base import BaseLiveStream
-from .utils import DouyinUtils, UnsupportedUrlError
 from .ab_sign import ab_sign
+from .utils import DouyinUtils, UnsupportedUrlError
 
 
 class DouyinLiveStream(BaseLiveStream):
