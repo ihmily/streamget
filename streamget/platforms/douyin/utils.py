@@ -35,7 +35,7 @@ class DouyinUtils:
         try:
             with open(f'{JS_SCRIPT_PATH}/x-bogus.js') as f:
                 js_code = f.read()
-            xbogus = execjs.compile(js_code).call('sign', query, headers.get("User-Agent", "user-agent"))
+            xbogus = execjs.compile(js_code).call('sign', query, headers.get("User-Agent") or headers.get("user-agent"))
             return xbogus
         except execjs.ProgramError:
             raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')

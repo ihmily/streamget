@@ -6,6 +6,7 @@ from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req, get_response_status
 from ..base import BaseLiveStream
 from .utils import DouyinUtils, UnsupportedUrlError
+from .ab_sign import ab_sign
 
 
 class DouyinLiveStream(BaseLiveStream):
@@ -66,12 +67,13 @@ class DouyinLiveStream(BaseLiveStream):
         return sorted_streams
 
     async def _get_web_stream_data(self, web_rid: str, process_data: bool = True):
+
         headers = {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
-            'accept-language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-            'cookie': 'ttwid=1%7CLAOiG67XxtjE2IQz04Hy-v5HcWLaBb0xKxcGI2Kfezg%7C1757134101'
-                      '%7C1256b68c29b63c9d830b144cc13aa64c1d6198e089658177977757ea20923265',
-            'referer': 'https://live.douyin.com/'
+            'referer': 'https://live.douyin.com/335354047186',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/123.0.0.0 Safari/537.36',
+            'cookie': "ttwid=1%7CmDcInbJ7AJ-2PGtsgrG4xj7SOiNMzePqQBF1LMO2Qkg%7C1761107324%7Cbbf97c2cd9f8eae8e8c36db"
+                      "4ef50c323deaa4b161179170aaf659590867c162d"
         }
         if self.cookies and 'ttwid=' in self.cookies:
             headers['cookie'] = self.cookies
@@ -89,9 +91,11 @@ class DouyinLiveStream(BaseLiveStream):
             "web_rid": web_rid,
             'is_need_double_stream': 'false',
             'msToken': '',
-            'a_bogus': ''
         }
+
         api = 'https://live.douyin.com/webcast/room/web/enter/?' + urllib.parse.urlencode(params)
+        a_bogus = ab_sign(urllib.parse.urlparse(api).query, headers['user-agent'])
+        api += "&a_bogus=" + a_bogus
         json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=headers)
         if not process_data:
             return json.loads(json_str)
@@ -215,11 +219,14 @@ class DouyinLiveStream(BaseLiveStream):
         douyin_utils = DouyinUtils()
         try:
             if self.stream_orientation == 2:
-                return await self._get_app_web_stream_data(url, process_data)
-                # html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
-                # web_rid = re.search('webRid(.*?)desensitizedNickname', html_str).group(1)
-                # web_rid = re.search(r'(\d+)', web_rid).group(1)
-                # return await self._get_web_stream_data(web_rid, process_data)
+                # return await self._get_app_web_stream_data(url, process_data)
+                if 'https://live.douyin.com/' in url:
+                    web_rid = url.split('?')[0].rsplit('/', maxsplit=1)[-1]
+                else:
+                    html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
+                    web_rid = re.search('webRid(.*?)desensitizedNickname', html_str).group(1)
+                    web_rid = re.search(r'(\d+)', web_rid).group(1)
+                return await self._get_web_stream_data(web_rid, process_data)
 
             room_id, sec_uid = await douyin_utils.get_sec_user_id(url, proxy_addr=self.proxy_addr)
             app_params = {
@@ -233,6 +240,8 @@ class DouyinLiveStream(BaseLiveStream):
                 "is_need_double_stream": True
             }
             api = 'https://webcast.amemv.com/webcast/room/reflow/info/?' + urllib.parse.urlencode(app_params)
+            a_bogus = ab_sign(urllib.parse.urlparse(api).query, self.mobile_headers['user-agent'])
+            api += "&a_bogus=" + a_bogus
             json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
             if not process_data:
                 return json.loads(json_str)
@@ -278,7 +287,12 @@ class DouyinLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
+
         try:
+            # add a_bogus
+            web_rid = url.split('?')[0].rsplit('/', maxsplit=1)[-1]
+            return await self._get_web_stream_data(web_rid, process_data)
+
             url = url.strip()
             origin_url_list = None
             html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
