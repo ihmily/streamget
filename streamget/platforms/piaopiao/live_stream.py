@@ -12,6 +12,7 @@ class PiaopaioLiveStream(BaseLiveStream):
     def __init__(self, proxy_addr: str | None = None, cookies: str | None = None):
         super().__init__(proxy_addr, cookies)
         self.pc_headers = self._get_pc_headers()
+        self.mobile_headers = self._get_mobile_headers()
 
     def _get_pc_headers(self) -> dict:
         return {
@@ -21,6 +22,43 @@ class PiaopaioLiveStream(BaseLiveStream):
             'user-agent': 'ios/7.830 (ios 17.0; ; iPhone 15 (A2846/A3089/A3090/A3092))',
             'cookie': self.cookies or '',
         }
+
+    async def fetch_app_stream_data(self, url: str, process_data: bool = True) -> dict:
+        # use shortID not anchorUid
+        short_id = url.split('?')[0].rsplit('/', maxsplit=1)[-1]
+        json_data = {
+            "platform": "iOS",
+            "device": "iPhone",
+            "token": "Iq6iKDovSwvmmMtJo8f3bqcThX573ndM",
+            "channel": "AppStorePLIM",
+            "subChannel": "",
+            "version": "1.7.27",
+            "meid": "",
+            "uid": 92128122,
+            "params": {
+                "keyword": short_id
+            },
+            "build": "183",
+            "app": "plpl",
+            "imei": ""
+        }
+        api = 'https://api.pp.weimipopo.com/plpl/pms/search/user/v2'
+        json_str = await async_req(api, json_data=json_data, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+        json_data = json.loads(json_str)
+        if not process_data:
+            return json_data
+        result = {"anchor_name": '', "is_live": False, "live_url": url}
+        for data in json_data['data']['userList']:
+            if str(data['user']['shortId']) == str(short_id):
+                anchor_name = data['user']['name']
+                result['anchor_name'] = anchor_name
+                live_status = json_data['data']['userList'][0].get('live')
+
+                if live_status:
+                    rtmp_url = json_data['data']['livingUsers'][0]['live']['pullUrl']
+                    title = json_data['data']['livingUsers'][0]['live']['title']
+                    result |= {'is_live': True, 'title': title, 'm3u8_url': rtmp_url, 'record_url': rtmp_url}
+        return result
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
