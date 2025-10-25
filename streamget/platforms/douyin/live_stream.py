@@ -2,6 +2,8 @@ import json
 import re
 import urllib.parse
 
+from deprecated import deprecated
+
 from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req, get_response_status
 from ..base import BaseLiveStream
@@ -21,7 +23,8 @@ class DouyinLiveStream(BaseLiveStream):
 
     def _get_pc_headers(self) -> dict:
         return {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/141.0.0.0 Safari/537.36',
             'accept-language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
             'cookie': self.cookies or '__ac_nonce=064caded4009deafd8b89',
             'referer': 'https://live.douyin.com/'
@@ -97,12 +100,16 @@ class DouyinLiveStream(BaseLiveStream):
         a_bogus = ab_sign(urllib.parse.urlparse(api).query, headers['user-agent'])
         api += "&a_bogus=" + a_bogus
         json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=headers)
+        if not json_str:
+            raise Exception("it triggered risk control")
+
         if not process_data:
             return json.loads(json_str)
         else:
             json_data = json.loads(json_str)['data']
-            if not json_data.get('data'):
-                raise Exception("live data fetch error")
+            if not json_data.get('data') or not json_data['data']:
+                raise Exception("VR live is not supported")
+
             room_data = json_data['data'][0]
             room_data['anchor_name'] = json_data['user']['nickname']
             room_data['live_url'] = "https://live.douyin.com/" + str(web_rid)
@@ -243,14 +250,17 @@ class DouyinLiveStream(BaseLiveStream):
             a_bogus = ab_sign(urllib.parse.urlparse(api).query, self.mobile_headers['user-agent'])
             api += "&a_bogus=" + a_bogus
             json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+            if not json_str:
+                raise Exception("it triggered risk control")
+
             if not process_data:
                 return json.loads(json_str)
             else:
                 json_data = json.loads(json_str)['data']
-                room_data = json_data.get('room')
+                if not json_data.get('room'):
+                    raise Exception(f"{url} VR live is not supported")
 
-                if not room_data:
-                    raise Exception("VR live is not supported")
+                room_data = json_data.get('room')
                 owner_data = room_data['owner']
                 room_data['anchor_name'] = owner_data['nickname']
                 web_rid = owner_data.get('web_rid')
@@ -277,6 +287,11 @@ class DouyinLiveStream(BaseLiveStream):
             return await self.fetch_web_stream_data('https://live.douyin.com/' + unique_id)
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
+        web_rid = url.split('?')[0].rsplit('/', maxsplit=1)[-1]
+        return await self._get_web_stream_data(web_rid, process_data)
+
+    @deprecated(reason="Use fetch_web_stream_data() instead.", version="4.0.9")
+    async def fetch_web_stream_data_v1(self, url: str, process_data: bool = True) -> dict:
         """
         Fetches web stream data for a live room.
 
@@ -289,10 +304,6 @@ class DouyinLiveStream(BaseLiveStream):
         """
 
         try:
-            # add a_bogus
-            web_rid = url.split('?')[0].rsplit('/', maxsplit=1)[-1]
-            return await self._get_web_stream_data(web_rid, process_data)
-
             url = url.strip()
             origin_url_list = None
             html_str = await async_req(url, proxy_addr=self.proxy_addr, headers=self.pc_headers)
