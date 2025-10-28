@@ -54,7 +54,7 @@ class DouyuLiveStream(BaseLiveStream):
         except execjs.ProgramError:
             raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
 
-    async def _fetch_web_stream_url(self, rid: str, rate: str = '-1') -> dict:
+    async def _fetch_web_stream_url(self, rid: str, rate: str = '-1', cdn: str | None = None) -> dict:
 
         did = '10000000000000000000000000003306'
         params_list = await self._get_token_js(rid, did)
@@ -67,6 +67,9 @@ class DouyuLiveStream(BaseLiveStream):
             'rid': rid,
             'rate': rate,  # 0蓝光、3超清、2高清、-1默认
         }
+
+        if cdn:
+            data['cdn'] = cdn
 
         # app_api = 'https://m.douyu.com/hgapi/livenc/room/getStreamUrl'
         app_api = f'https://www.douyu.com/lapi/live/getH5Play/{rid}'
@@ -85,7 +88,7 @@ class DouyuLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
-        match_rid = re.search('rid=(.*?)(?=&|$)', url)
+        match_rid = re.search('rid=(.*?)(?=&|$)', url) or re.search('beta/(.*?)(?=\\?|$)', url)
         if match_rid:
             rid = match_rid.group(1)
         else:
@@ -112,7 +115,8 @@ class DouyuLiveStream(BaseLiveStream):
             result["room_id"] = json_data['room']['room_id']
         return result
 
-    async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
+    async def fetch_stream_url(
+            self, json_data: dict, video_quality: str | int | None = None, cdn: str | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
@@ -139,12 +143,32 @@ class DouyuLiveStream(BaseLiveStream):
             else:
                 video_quality = video_quality.upper()
 
+        flv_url_list = []
         rate = video_quality_options.get(video_quality, '0')
-        flv_data = await self._fetch_web_stream_url(rid=rid, rate=rate)
-        rtmp_url = flv_data['data'].get('rtmp_url')
-        rtmp_live = flv_data['data'].get('rtmp_live')
-        if rtmp_live:
-            flv_url = f'{rtmp_url}/{rtmp_live}'
-            json_data |= {"platform": platform, 'quality': video_quality, 'flv_url': flv_url, 'record_url': flv_url}
-        return wrap_stream(json_data)
 
+        async def get_url(rid: str, rate: str, cdn: str | None = None):
+            flv_data = await self._fetch_web_stream_url(rid=rid, rate=rate, cdn=cdn)
+            rtmp_url = flv_data['data'].get('rtmp_url')
+            rtmp_live = flv_data['data'].get('rtmp_live')
+            flv_url_list.append(f'{rtmp_url}/{rtmp_live}')
+            return flv_data
+
+        flv_data = await get_url(rid=rid, rate=rate, cdn=cdn)
+        rtmp_cdn = flv_data['data'].get('rtmp_cdn')
+        cdn_list = flv_data['data'].get('cdnsWithName')
+
+        for cdn in cdn_list:
+            if cdn['cdn'] != rtmp_cdn:
+                await get_url(rid=rid, rate=rate, cdn=cdn['cdn'])
+
+        if flv_url_list:
+            flv_url = flv_url_list[0]
+            flv_url_list.remove(flv_url)
+            json_data |= {
+                "platform": platform,
+                'quality': video_quality,
+                'flv_url': flv_url,
+                'record_url': flv_url,
+                'extra': {'backup_url_list': flv_url_list}
+            }
+        return wrap_stream(json_data)
