@@ -1,12 +1,11 @@
+import asyncio
 import hashlib
-import json
 import re
 import time
 
-import execjs
+import httpx
 
 from ...data import StreamData, wrap_stream
-from ...requests.async_http import async_req
 from ..base import BaseLiveStream
 
 
@@ -14,68 +13,74 @@ class DouyuLiveStream(BaseLiveStream):
     """
     A class for fetching and processing Douyu live stream information.
     """
+    DEFAULT_DID = "10000000000000000000000000001501"
+    WEB_DOMAIN = "www.douyu.com"
+    PLAY_DOMAIN = "playweb.douyucdn.cn"
+    MOBILE_DOMAIN = "m.douyu.com"
+
     def __init__(self, proxy_addr: str | None = None, cookies: str | None = None):
         super().__init__(proxy_addr, cookies)
-        self.mobile_headers = self._get_mobile_headers()
-        self.pc_headers = self._get_pc_headers()
+        self.client: httpx.AsyncClient | None = None
+        self.white_encrypt_key: dict = {}
+        self.user_agent = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        )
 
-    def _get_mobile_headers(self) -> dict:
-        return {
-            'user-agent': 'ios/7.830 (ios 17.0; ; iPhone 15 (A2846/A3089/A3090/A3092))',
-            'cookie': self.cookies or '',
-            'referer': 'https://m.douyu.com/3125893?rid=3125893&dyshid=0-96003918aa5365bc6dcb4933000316p1&dyshci=181',
-        }
+    async def _get_client(self) -> httpx.AsyncClient:
+        if self.client is None:
+            transport = httpx.AsyncHTTPTransport(proxy=self.proxy_addr) if self.proxy_addr else None
+            self.client = httpx.AsyncClient(timeout=30.0, transport=transport)
+        return self.client
 
-    @staticmethod
-    def _get_md5(data) -> str:
-        return hashlib.md5(data.encode('utf-8')).hexdigest()
-
-    async def _get_token_js(self, rid: str, did: str) -> list[str]:
-        url = f'https://www.douyu.com/{rid}'
-        html_str = await async_req(url=url, proxy_addr=self.proxy_addr)
-        result = re.search(r'(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function', html_str).group(1)
-        func_ub9 = re.sub(r'eval.*?;}', 'strc;}', result)
-        js = execjs.compile(func_ub9)
-        res = js.call('ub98484234')
-
-        t10 = str(int(time.time()))
-        v = re.search(r'v=(\d+)', res).group(1)
-        rb = self._get_md5(str(rid) + str(did) + str(t10) + str(v))
-
-        func_sign = re.sub(r'return rt;}\);?', 'return rt;}', res)
-        func_sign = func_sign.replace('(function (', 'function sign(')
-        func_sign = func_sign.replace('CryptoJS.MD5(cb).toString()', '"' + rb + '"')
-
+    async def _update_white_key(self) -> bool:
         try:
-            js = execjs.compile(func_sign)
-            params = js.call('sign', rid, did, t10)
-            params_list = re.findall('=(.*?)(?=&|$)', params)
-            return params_list
-        except execjs.ProgramError:
-            raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
+            client = await self._get_client()
+            resp = await client.get(
+                f"https://{self.WEB_DOMAIN}/wgapi/livenc/liveweb/websec/getEncryption",
+                params={"did": self.DEFAULT_DID},
+                headers={"User-Agent": self.user_agent},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("error") != 0:
+                return False
+            self.white_encrypt_key = data["data"]
+            self.white_encrypt_key["cpp"]["expire_at"] = int(time.time()) + 86400
+            return True
+        except Exception:
+            return False
 
-    async def _fetch_web_stream_url(self, rid: str, rate: str = '-1', cdn: str | None = None) -> dict:
+    async def _is_key_valid(self) -> bool:
+        return (
+            bool(self.white_encrypt_key)
+            and self.white_encrypt_key.get("cpp", {}).get("expire_at", 0) > int(time.time())
+        )
 
-        did = '10000000000000000000000000003306'
-        params_list = await self._get_token_js(rid, did)
-        data = {
-            'v': params_list[0],
-            'did': params_list[1],
-            'tt': params_list[2],
-            'sign': params_list[3],  # 10分钟有效期
-            'ver': '22011191',
-            'rid': rid,
-            'rate': rate,  # 0蓝光、3超清、2高清、-1默认
-        }
+    async def _get_sign(self, rid: str) -> dict:
+        for _ in range(3):
+            if not await self._is_key_valid():
+                if not await self._update_white_key():
+                    continue
+            break
+        else:
+            raise RuntimeError("无法获取有效白名单密钥")
 
-        if cdn:
-            data['cdn'] = cdn
+        ts = int(time.time())
+        rand_str = self.white_encrypt_key["rand_str"]
+        enc_time = self.white_encrypt_key["enc_time"]
+        key = self.white_encrypt_key["key"]
+        is_special = self.white_encrypt_key["is_special"]
 
-        # app_api = 'https://m.douyu.com/hgapi/livenc/room/getStreamUrl'
-        app_api = f'https://www.douyu.com/lapi/live/getH5Play/{rid}'
-        json_str = await async_req(url=app_api, proxy_addr=self.proxy_addr, headers=self.mobile_headers, data=data)
-        json_data = json.loads(json_str)
-        return json_data
+        secret = rand_str
+        salt = "" if is_special else f"{rid}{ts}"
+        for _ in range(enc_time):
+            secret = hashlib.md5(f"{secret}{key}".encode()).hexdigest()
+        auth = hashlib.md5(f"{secret}{key}{salt}".encode()).hexdigest()
+
+        key_data = {k: v for k, v in self.white_encrypt_key.items() if k != "cpp"}
+
+        return {"key": key_data, "auth": auth, "ts": ts}
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
@@ -88,31 +93,32 @@ class DouyuLiveStream(BaseLiveStream):
         Returns:
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
-        match_rid = re.search('rid=(.*?)(?=&|$)', url) or re.search('beta/(.*?)(?=\\?|$)', url)
-        if match_rid:
-            rid = match_rid.group(1)
-        else:
-            rid = re.search('douyu.com/(.*?)(?=\\?|$)', url).group(1)
-            html_str = await async_req(url=f'https://m.douyu.com/{rid}', proxy_addr=self.proxy_addr,
-                                       headers=self.pc_headers)
-            json_str = re.findall('<script id="vike_pageContext" type="application/json">(.*?)</script>', html_str)[0]
-            json_data = json.loads(json_str)
-            rid = json_data['pageProps']['room']['roomInfo']['roomInfo']['rid']
+        client = await self._get_client()
 
-        url2 = f'https://www.douyu.com/betard/{rid}'
-        json_str = await async_req(url2, proxy_addr=self.proxy_addr, headers=self.pc_headers)
-        json_data = json.loads(json_str)
+        rid_match = re.search(r'douyu\.com/(\d+)', url) or re.search(r'rid=(\d+)', url)
+        if rid_match:
+            rid = rid_match.group(1)
+        else:
+            path = url.split("douyu.com/")[1].split("?")[0].split("/")[0]
+            resp = await client.get(f"https://{self.MOBILE_DOMAIN}/{path}")
+            rid = re.search(r'"rid":(\d+)', resp.text).group(1)
+
+        resp = await client.get(f"https://{self.WEB_DOMAIN}/betard/{rid}")
+        json_data = resp.json()["room"]
+
         if not process_data:
             return json_data
+
+        is_live = json_data["show_status"] == 1 and json_data["videoLoop"] == 0
+        title = f"录播 {json_data['room_name']}" if not is_live else json_data["room_name"]
+
         result = {
-            "anchor_name": json_data['room']['nickname'],
-            "is_live": False,
-            "live_url": url
+            "anchor_name": json_data["nickname"],
+            "is_live": is_live,
+            "live_url": url,
+            "room_id": json_data["room_id"],
+            "title": title.replace('&nbsp;', ' ').strip(),
         }
-        if json_data['room']['videoLoop'] == 0 and json_data['room']['show_status'] == 1:
-            result["title"] = json_data['room']['room_name'].replace('&nbsp;', '')
-            result["is_live"] = True
-            result["room_id"] = json_data['room']['room_id']
         return result
 
     async def fetch_stream_url(
@@ -121,9 +127,9 @@ class DouyuLiveStream(BaseLiveStream):
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
         platform = '斗鱼直播'
-        if not json_data["is_live"]:
-            json_data |= {"platform": platform}
-            return wrap_stream(json_data)
+        rid = str(json_data["room_id"])
+        json_data.pop("room_id", None)
+
         video_quality_options = {
             "OD": '0',
             "BD": '0',
@@ -132,8 +138,6 @@ class DouyuLiveStream(BaseLiveStream):
             "SD": '1',
             "LD": '1'
         }
-        rid = str(json_data["room_id"])
-        json_data.pop("room_id")
 
         if not video_quality:
             video_quality = "OD"
@@ -143,32 +147,110 @@ class DouyuLiveStream(BaseLiveStream):
             else:
                 video_quality = video_quality.upper()
 
-        flv_url_list = []
         rate = video_quality_options.get(video_quality, '0')
 
-        async def get_url(rid: str, rate: str, cdn: str | None = None):
-            flv_data = await self._fetch_web_stream_url(rid=rid, rate=rate, cdn=cdn)
-            rtmp_url = flv_data['data'].get('rtmp_url')
-            rtmp_live = flv_data['data'].get('rtmp_live')
-            flv_url_list.append(f'{rtmp_url}/{rtmp_live}')
-            return flv_data
+        client = await self._get_client()
+        headers = {
+            "Referer": f"https://{self.WEB_DOMAIN}/",
+            "Origin": f"https://{self.WEB_DOMAIN}",
+            "User-Agent": self.user_agent,
+        }
 
-        flv_data = await get_url(rid=rid, rate=rate, cdn=cdn)
-        rtmp_cdn = flv_data['data'].get('rtmp_cdn')
-        cdn_list = flv_data['data'].get('cdnsWithName')
+        base_params = {
+            "rate": rate,
+            "ver": "219032101",
+            "iar": "0",
+            "ive": "0",
+            "rid": rid,
+            "hevc": "0",
+            "fa": "0",
+            "sov": "0",
+        }
 
-        for cdn in cdn_list:
-            if cdn['cdn'] != rtmp_cdn:
-                await get_url(rid=rid, rate=rate, cdn=cdn['cdn'])
+        flv_url_list = []
 
-        if flv_url_list:
-            flv_url = flv_url_list[0]
-            flv_url_list.remove(flv_url)
+        async def fetch_for_cdn(cdn_name: str | None = None):
+            current_params = base_params.copy()
+            if cdn_name:
+                current_params["cdn"] = cdn_name
+
+            for attempt in range(3):
+                try:
+                    sign_data = await self._get_sign(rid)
+                    params = current_params.copy()
+                    params.update({
+                        "enc_data": sign_data["key"]["enc_data"],
+                        "tt": sign_data["ts"],
+                        "did": self.DEFAULT_DID,
+                        "auth": sign_data["auth"],
+                    })
+
+                    url = f"https://{self.PLAY_DOMAIN}/lapi/live/getH5PlayV1/{rid}"
+                    resp = await client.post(url, headers=headers, params=params, data=params)
+                    resp.raise_for_status()
+                    data = resp.json()
+
+                    if data.get("error") != 0:
+                        raise ValueError(data.get("msg", "API error"))
+
+                    play_info = data["data"]
+                    raw_url = f"{play_info['rtmp_url']}/{play_info['rtmp_live']}"
+
+                    if raw_url not in flv_url_list:
+                        flv_url_list.append(raw_url)
+
+                    return play_info
+
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 403:
+                        await self._update_white_key()
+                    else:
+                        break
+                except Exception:
+                    break
+            return None
+
+        main_play_info = await fetch_for_cdn(None)
+
+        if not main_play_info:
+            if self.client:
+                await self.client.aclose()
             json_data |= {
                 "platform": platform,
                 'quality': video_quality,
-                'flv_url': flv_url,
-                'record_url': flv_url,
-                'extra': {'backup_url_list': flv_url_list}
+                'flv_url': None,
+                'record_url': None,
+                'extra': {'backup_url_list': []}
             }
+            return wrap_stream(json_data)
+
+        if cdn and main_play_info.get('rtmp_cdn') != cdn:
+            await fetch_for_cdn(cdn)
+
+        cdns_with_name = main_play_info.get('cdnsWithName', [])
+        default_cdn = main_play_info.get('rtmp_cdn')
+
+        other_cdn_tasks = [
+            fetch_for_cdn(item['cdn'])
+            for item in cdns_with_name
+            if item['cdn'] != default_cdn and (cdn is None or item['cdn'] != cdn)
+        ]
+
+        if other_cdn_tasks:
+            await asyncio.gather(*other_cdn_tasks, return_exceptions=True)
+
+        main_url = flv_url_list[0]
+        backup_urls = flv_url_list[1:] if len(flv_url_list) > 1 else []
+
+        json_data |= {
+            "platform": platform,
+            'quality': video_quality,
+            'flv_url': main_url,
+            'record_url': main_url,
+            'extra': {'backup_url_list': backup_urls}
+        }
+
+        if self.client:
+            await self.client.aclose()
+
         return wrap_stream(json_data)
