@@ -1,5 +1,6 @@
 import json
 import random
+import re
 import urllib.parse
 
 from ...data import StreamData, wrap_stream
@@ -49,13 +50,76 @@ class TwitchLiveStream(BaseLiveStream):
         ]
 
         json_str = await async_req('https://gql.twitch.tv/gql', proxy_addr=self.proxy_addr, headers=self.pc_headers,
-                                   json_data=data)
+                                   json_data=data,http2=False)
         json_data = json.loads(json_str)
         user_data = json_data[0]['data']['userOrError']
         login_name = user_data["login"]
         nickname = f"{user_data['displayName']}-{login_name}"
         status = True if user_data['stream'] else False
         return nickname, status
+
+    async def get_play_url_list(self, m3u8: str, proxy: str | None = None, headers: dict | None = None) -> list[dict]:
+        """
+        Fetches and parses the M3U8 playlist, returning structured stream information including audio-only streams.
+
+        Returns a list of dictionaries containing stream info:
+        {
+            'url': str,
+            'bandwidth': int,
+            'resolution': str | None,
+            'group_id': str,
+            'name': str,
+            'is_audio_only': bool
+        }
+        """
+        resp = await async_req(m3u8, proxy_addr=proxy, headers=headers)
+        play_url_list = []
+
+        lines = resp.split('\n')
+        current_stream_info = {}
+        current_group_id = None
+        current_name = None
+
+        for line in lines:
+            line = line.strip()
+
+            # Parse #EXT-X-MEDIA line to get GROUP-ID and NAME
+            if line.startswith('#EXT-X-MEDIA:'):
+                group_id_match = re.search(r'GROUP-ID="([^"]+)"', line)
+                name_match = re.search(r'NAME="([^"]+)"', line)
+                if group_id_match:
+                    current_group_id = group_id_match.group(1)
+                if name_match:
+                    current_name = name_match.group(1)
+
+            # Parse #EXT-X-STREAM-INF line
+            elif line.startswith('#EXT-X-STREAM-INF:'):
+                bandwidth_match = re.search(r'BANDWIDTH=(\d+)', line)
+                resolution_match = re.search(r'RESOLUTION=(\d+x\d+)', line)
+
+                current_stream_info['bandwidth'] = int(bandwidth_match.group(1)) if bandwidth_match else 0
+                current_stream_info['resolution'] = resolution_match.group(1) if resolution_match else None
+
+            # URL line - add stream to list
+            elif line.startswith('https://') and current_stream_info:
+                stream = {
+                    'url': line,
+                    'bandwidth': current_stream_info.get('bandwidth', 0),
+                    'resolution': current_stream_info.get('resolution'),
+                    'group_id': current_group_id or 'unknown',
+                    'name': current_name or 'unknown',
+                    'is_audio_only': current_group_id == 'audio_only'
+                }
+                play_url_list.append(stream)
+
+                # Reset for next stream
+                current_stream_info = {}
+                current_group_id = None
+                current_name = None
+
+        # Sort by bandwidth descending (highest quality first)
+        play_url_list.sort(key=lambda x: x['bandwidth'], reverse=True)
+        return play_url_list
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
@@ -90,7 +154,7 @@ class TwitchLiveStream(BaseLiveStream):
         }
 
         json_str = await async_req('https://gql.twitch.tv/gql', proxy_addr=self.proxy_addr, headers=self.pc_headers,
-                                   json_data=data)
+                                   json_data=data,http2=False)
         json_data = json.loads(json_str)
         token = json_data['data']['streamPlaybackAccessToken']['value']
         sign = json_data['data']['streamPlaybackAccessToken']['signature']
@@ -101,6 +165,7 @@ class TwitchLiveStream(BaseLiveStream):
             play_session_id = random.choice(["bdd22331a986c7f1073628f2fc5b19da", "064bc3ff1722b6f53b0b5b8c01e46ca5"])
             params = {
                 "acmb": "e30=",
+                "allow_audio_only": "true",
                 "allow_source": "true",
                 "browser_family": "firefox",
                 "browser_version": "124.0",
@@ -129,6 +194,44 @@ class TwitchLiveStream(BaseLiveStream):
     async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
+
+        Supports quality options:
+        - "AD": Audio-only stream
+        - "OD", "UHD", "HD", etc.: Video streams (uses base class logic)
         """
-        data = await self.get_stream_url(json_data, video_quality, spec=True, platform='Twitch')
+        platform = 'Twitch'
+        if not json_data['is_live']:
+            json_data |= {"platform": platform}
+            return wrap_stream(json_data)
+
+        play_url_list = json_data.get('play_url_list', [])
+
+        if not play_url_list:
+            json_data |= {"platform": platform}
+            return wrap_stream(json_data)
+
+        # Handle audio-only quality (AD)
+        if video_quality == 'AD':
+            audio_stream = next((s for s in play_url_list if s.get('is_audio_only')), None)
+            if audio_stream:
+                data = {
+                    "platform": platform,
+                    "anchor_name": json_data.get('anchor_name'),
+                    "is_live": True,
+                    "live_url": json_data.get('live_url'),
+                    "title": json_data.get('title'),
+                    "quality": "AD",
+                    "m3u8_url": json_data.get('m3u8_url'),
+                    "record_url": audio_stream['url'],
+                    "extra": {
+                        'bandwidth': audio_stream.get('bandwidth'),
+                        'is_audio_only': True
+                    }
+                }
+                return wrap_stream(data)
+
+        # For other qualities, convert dict list to URL list for base class compatibility
+        url_list = [stream['url'] for stream in play_url_list]
+        json_data['play_url_list'] = url_list
+        data = await self.get_stream_url(json_data, video_quality, spec=True, platform=platform)
         return wrap_stream(data)
