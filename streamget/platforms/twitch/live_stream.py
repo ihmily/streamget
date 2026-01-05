@@ -36,14 +36,19 @@ class TwitchLiveStream(BaseLiveStream):
 
         data = [
             {
-                "operationName": "ChannelShell",
+                "operationName": "ComscoreStreamingQuery",
                 "variables": {
-                    "login": uid
+                    "channel": uid.lower(),
+                    "clipSlug": "",
+                    "isClip": False,
+                    "isLive": True,
+                    "isVodOrCollection": False,
+                    "vodID": "",
                 },
                 "extensions": {
                     "persistedQuery": {
                         "version": 1,
-                        "sha256Hash": "580ab410bcd0c1ad194224957ae2241e5d252b2c5173d8e0cce9d32d5bb14efe"
+                        "sha256Hash": "e1edae8122517d013405f237ffcc124515dc6ded82480a88daef69c83b53ac01"
                     }
                 }
             },
@@ -52,11 +57,11 @@ class TwitchLiveStream(BaseLiveStream):
         json_str = await async_req('https://gql.twitch.tv/gql', proxy_addr=self.proxy_addr, headers=self.pc_headers,
                                    json_data=data,http2=False)
         json_data = json.loads(json_str)
-        user_data = json_data[0]['data']['userOrError']
-        login_name = user_data["login"]
-        nickname = f"{user_data['displayName']}-{login_name}"
+        user_data = json_data[0]['data']['user']
+        nickname = f"{user_data['displayName']}-{uid}"
         status = True if user_data['stream'] else False
-        return nickname, status
+        title = user_data['broadcastSettings']['title']
+        return nickname, status, title
 
     async def get_play_url_list(self, m3u8: str, proxy: str | None = None, headers: dict | None = None) -> list[dict]:
         """
@@ -159,8 +164,8 @@ class TwitchLiveStream(BaseLiveStream):
         token = json_data['data']['streamPlaybackAccessToken']['value']
         sign = json_data['data']['streamPlaybackAccessToken']['signature']
 
-        anchor_name, live_status = await self.get_twitchtv_room_info(url.strip())
-        result = {"anchor_name": anchor_name, "is_live": live_status, "live_url": url}
+        anchor_name, live_status, live_title = await self.get_twitchtv_room_info(url.strip())
+        result = {"anchor_name": anchor_name, "is_live": live_status, "live_url": url, "title": live_title}
         if live_status:
             play_session_id = random.choice(["bdd22331a986c7f1073628f2fc5b19da", "064bc3ff1722b6f53b0b5b8c01e46ca5"])
             params = {
