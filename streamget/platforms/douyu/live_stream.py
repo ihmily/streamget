@@ -3,8 +3,6 @@ import json
 import re
 import time
 
-import execjs
-
 from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
 from ..base import BaseLiveStream
@@ -30,49 +28,54 @@ class DouyuLiveStream(BaseLiveStream):
     def _get_md5(data) -> str:
         return hashlib.md5(data.encode('utf-8')).hexdigest()
 
-    async def _get_token_js(self, rid: str, did: str) -> list[str]:
-        url = f'https://www.douyu.com/{rid}'
-        html_str = await async_req(url=url, proxy_addr=self.proxy_addr)
-        result = re.search(r'(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function', html_str).group(1)
-        func_ub9 = re.sub(r'eval.*?;}', 'strc;}', result)
-        js = execjs.compile(func_ub9)
-        res = js.call('ub98484234')
+    async def _get_encryption(self, rid: str, did: str, headers: dict | None = None) -> dict:
+        url = f'https://www.douyu.com/wgapi/livenc/liveweb/websec/getEncryption?did={did}'
+        json_str = await async_req(url=url, proxy_addr=self.proxy_addr, headers=headers)
+        json_data = json.loads(json_str)
+        if json_data.get('error') != 0:
+            raise Exception(f"Failed to get encryption info: {json_data.get('msg')}")
 
-        t10 = str(int(time.time()))
-        v = re.search(r'v=(\d+)', res).group(1)
-        rb = self._get_md5(str(rid) + str(did) + str(t10) + str(v))
+        data = json_data['data']
+        key = data['key']
+        rand_str = data['rand_str']
+        enc_time = data['enc_time']
+        is_special = data['is_special']
 
-        func_sign = re.sub(r'return rt;}\);?', 'return rt;}', res)
-        func_sign = func_sign.replace('(function (', 'function sign(')
-        func_sign = func_sign.replace('CryptoJS.MD5(cb).toString()', '"' + rb + '"')
+        ts = int(time.time())
+        o = "" if is_special == 1 else f"{rid}{ts}"
+        u = rand_str
 
-        try:
-            js = execjs.compile(func_sign)
-            params = js.call('sign', rid, did, t10)
-            params_list = re.findall('=(.*?)(?=&|$)', params)
-            return params_list
-        except execjs.ProgramError:
-            raise execjs.ProgramError('Failed to execute JS code. Please check if the Node.js environment')
+        for _ in range(enc_time):
+            u = self._get_md5(u + key)
 
-    async def _fetch_web_stream_url(self, rid: str, rate: str = '-1', cdn: str | None = None) -> dict:
+        auth = self._get_md5(u + key + o)
 
-        did = '10000000000000000000000000003306'
-        params_list = await self._get_token_js(rid, did)
-        data = {
-            'v': params_list[0],
-            'did': params_list[1],
-            'tt': params_list[2],
-            'sign': params_list[3],  # 10分钟有效期
-            'ver': '22011191',
-            'rid': rid,
-            'rate': rate,  # 0蓝光、3超清、2高清、-1默认
+        return {
+            'enc_data': data['enc_data'],
+            'tt': str(ts),
+            'did': did,
+            'auth': auth
         }
 
-        if cdn:
-            data['cdn'] = cdn
+    async def _fetch_web_stream_url(self, rid: str, rate: str = '-1', cdn: str | None = None) -> dict:
+        did = '10000000000000000000000000001501'
+        enc_params = await self._get_encryption(rid, did, headers=self.mobile_headers)
 
-        # app_api = 'https://m.douyu.com/hgapi/livenc/room/getStreamUrl'
-        app_api = f'https://www.douyu.com/lapi/live/getH5Play/{rid}'
+        data = {
+            'enc_data': enc_params['enc_data'],
+            'tt': enc_params['tt'],
+            'did': enc_params['did'],
+            'auth': enc_params['auth'],
+            'ver': 'Douyu_new',
+            'rid': rid,
+            'rate': rate,
+            'hevc': '0',
+            'fa': '0',
+            'ive': '0',
+            'cdn': cdn if cdn else ''
+        }
+
+        app_api = f'https://www.douyu.com/lapi/live/getH5PlayV1/{rid}'
         json_str = await async_req(url=app_api, proxy_addr=self.proxy_addr, headers=self.mobile_headers, data=data)
         json_data = json.loads(json_str)
         return json_data
