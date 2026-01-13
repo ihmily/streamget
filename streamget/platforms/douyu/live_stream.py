@@ -72,15 +72,18 @@ class DouyuLiveStream(BaseLiveStream):
         if not process_data:
             return json_data
 
-        raw_title = json_data['room_name'].replace('&nbsp;', ' ')
-        is_live = json_data['show_status'] == 1 and json_data['videoLoop'] == 0
-        title = f"录播 {raw_title}" if not is_live else raw_title
+        raw_title = json_data['room_name'].replace('&nbsp;', ' ').strip()
+        has_content = json_data['show_status'] == 1
+        is_loop = json_data['videoLoop'] == 1
+        is_live = has_content
+        title = f"【轮播】{raw_title}" if is_loop else raw_title
 
         result = {
             "anchor_name": json_data['nickname'],
             "is_live": is_live,
             "live_url": url,
-            "title": title.strip(),
+            "room_id": json_data['room_id'],
+            "title": title,
         }
         return result
 
@@ -96,7 +99,7 @@ class DouyuLiveStream(BaseLiveStream):
             raise RuntimeError('获取白名单密钥失败')
         return data['data']
 
-    async def _get_sign_params(self, rid: str) -> dict:
+    async def _fetch_web_stream_url(self, rid: str, rate: str = '-1', cdn: str | None = None) -> dict:
         white = await self._update_white_key()
         ts = int(time.time())
         secret = white['rand_str']
@@ -105,12 +108,30 @@ class DouyuLiveStream(BaseLiveStream):
             secret = hashlib.md5((secret + white['key']).encode()).hexdigest()
         auth = hashlib.md5((secret + white['key'] + salt).encode()).hexdigest()
 
-        return {
+        params = {
+            'rate': rate,
+            'ver': '219032101',
+            'iar': '0',
+            'ive': '0',
+            'rid': rid,
+            'hevc': '0',
+            'fa': '0',
+            'sov': '0',
             'enc_data': white['enc_data'],
             'tt': ts,
             'did': self.DEFAULT_DID,
             'auth': auth,
         }
+        if cdn:
+            params['cdn'] = cdn
+
+        json_str = await async_req(
+            url=f'https://{self.PLAY_DOMAIN}/lapi/live/getH5PlayV1/{rid}',
+            proxy_addr=self.proxy_addr,
+            headers=self._get_headers(origin=True, content_type=True),
+            data=params
+        )
+        return json.loads(json_str)
 
     async def fetch_stream_url(
             self, json_data: dict, video_quality: str | int | None = None, cdn: str | None = None) -> StreamData:
@@ -119,7 +140,8 @@ class DouyuLiveStream(BaseLiveStream):
         """
         platform = '斗鱼直播'
 
-        rid = re.search('douyu.com/(\\d+)', json_data['live_url']).group(1)
+        rid = str(json_data["room_id"])
+        json_data.pop("room_id")
 
         video_quality_options = {
             "OD": '0',
@@ -139,34 +161,20 @@ class DouyuLiveStream(BaseLiveStream):
                 video_quality = video_quality.upper()
 
         rate = video_quality_options.get(video_quality, '0')
-        async def get_url(cdn_name: str | None = None):
-            params = {
-                'rate': rate,
-                'ver': '219032101',
-                'iar': '0',
-                'ive': '0',
-                'rid': rid,
-                'hevc': '0',
-                'fa': '0',
-                'sov': '0',
-            }
-            if cdn_name:
-                params['cdn'] = cdn_name
 
-            sign = await self._get_sign_params(rid)
-            params.update(sign)
+        flv_url_list = []
 
-            json_str = await async_req(
-                url=f'https://{self.PLAY_DOMAIN}/lapi/live/getH5PlayV1/{rid}',
-                proxy_addr=self.proxy_addr,
-                headers=self._get_headers(origin=True, content_type=True),
-                data=params
-            )
-            data = json.loads(json_str)
-            if data.get('error') != 0:
-                return None
-
-            return data.get('data')
+        async def get_url(rid: str, rate: str, cdn: str | None = None):
+            flv_data = await self._fetch_web_stream_url(rid=rid, rate=rate, cdn=cdn)
+            if flv_data.get('error') != 0:
+                return
+            info = flv_data.get('data')
+            if not info:
+                return
+            flv_url = f"{info['rtmp_url']}/{info['rtmp_live']}"
+            if flv_url not in flv_url_list:
+                flv_url_list.append(flv_url)
+            return flv_data
 
         if not json_data['is_live']:
             json_data |= {
@@ -178,35 +186,25 @@ class DouyuLiveStream(BaseLiveStream):
             }
             return wrap_stream(json_data)
 
-        main_data = await get_url()
+        flv_data = await get_url(rid=rid, rate=rate, cdn=cdn)
 
-        if not main_data:
+        if flv_data and flv_data.get('data'):
+            rtmp_cdn = flv_data['data'].get('rtmp_cdn')
+            cdn_list = flv_data['data'].get('cdnsWithName', [])
+
+            for item in cdn_list:
+                if item['cdn'] != rtmp_cdn:
+                    await get_url(rid=rid, rate=rate, cdn=item['cdn'])
+
+        if flv_url_list:
+            flv_url = flv_url_list[0]
+            flv_url_list.remove(flv_url)
             json_data |= {
                 "platform": platform,
                 'quality': video_quality,
-                'flv_url': None,
-                'record_url': None,
-                'extra': {'backup_url_list': []}
+                'flv_url': flv_url,
+                'record_url': flv_url,
+                'extra': {'backup_url_list': flv_url_list}
             }
-            return wrap_stream(json_data)
-
-        main_url = f"{main_data['rtmp_url']}/{main_data['rtmp_live']}"
-        backup_urls = []
-
-        if cdn and main_data.get('rtmp_cdn') != cdn:
-            for item in main_data.get('cdnsWithName', []):
-                if item['cdn'] and item['cdn'] == cdn:
-                    main_data = await get_url(cdn)
-                    if main_data.get('rtmp_cdn') == cdn:
-                        backup_urls.append(main_url)
-                        main_url = f"{main_data['rtmp_url']}/{main_data['rtmp_live']}"
-
-        json_data |= {
-            "platform": platform,
-            'quality': video_quality,
-            'flv_url': main_url,
-            'record_url': main_url,
-            'extra': {'backup_url_list': backup_urls}
-        }
 
         return wrap_stream(json_data)
