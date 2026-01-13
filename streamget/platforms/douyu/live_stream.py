@@ -139,9 +139,6 @@ class DouyuLiveStream(BaseLiveStream):
                 video_quality = video_quality.upper()
 
         rate = video_quality_options.get(video_quality, '0')
-
-        urls = []
-
         async def get_url(cdn_name: str | None = None):
             params = {
                 'rate': rate,
@@ -169,11 +166,7 @@ class DouyuLiveStream(BaseLiveStream):
             if data.get('error') != 0:
                 return None
 
-            info = data['data']
-            flv_url = f"{info['rtmp_url']}/{info['rtmp_live']}"
-            if flv_url not in urls:
-                urls.append(flv_url)
-            return info
+            return data.get('data')
 
         if not json_data['is_live']:
             json_data |= {
@@ -197,15 +190,16 @@ class DouyuLiveStream(BaseLiveStream):
             }
             return wrap_stream(json_data)
 
+        main_url = f"{main_data['rtmp_url']}/{main_data['rtmp_live']}"
+        backup_urls = []
+
         if cdn and main_data.get('rtmp_cdn') != cdn:
-            await get_url(cdn)
-
-        for item in main_data.get('cdnsWithName', []):
-            if item['cdn'] != main_data.get('rtmp_cdn') and (cdn is None or item['cdn'] != cdn):
-                await get_url(item['cdn'])
-
-        main_url = urls[0]
-        backup_urls = urls[1:] if len(urls) > 1 else []
+            for item in main_data.get('cdnsWithName', []):
+                if item['cdn'] and item['cdn'] == cdn:
+                    main_data = await get_url(cdn)
+                    if main_data.get('rtmp_cdn') == cdn:
+                        backup_urls.append(main_url)
+                        main_url = f"{main_data['rtmp_url']}/{main_data['rtmp_live']}"
 
         json_data |= {
             "platform": platform,
