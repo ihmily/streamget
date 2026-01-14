@@ -39,17 +39,7 @@ class DouyuLiveStream(BaseLiveStream):
             headers['content-type'] = 'application/x-www-form-urlencoded'
         return headers
 
-    async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
-        """
-        Fetches web stream data for a live room.
-
-        Args:
-            url (str): The room URL.
-            process_data (bool): Whether to process the data. Defaults to True.
-
-        Returns:
-            dict: A dictionary containing anchor name, live status, room URL, and title.
-        """
+    async def get_room_id(self, url):
         match_rid = re.search('douyu.com/(\\d+)', url) or re.search('rid=(\\d+)', url)
         if match_rid:
             rid = match_rid.group(1)
@@ -61,6 +51,61 @@ class DouyuLiveStream(BaseLiveStream):
                 headers=self.base_headers
             )
             rid = re.search('"rid":(\\d+)', html_str).group(1)
+        return rid
+
+    async def fetch_app_stream_data(self, url: str, process_data: bool = True):
+
+        rid = await self.get_room_id(url)
+
+        data = {
+            'sk': rid,
+            'log_token': '',
+            'ct_code': '26',
+            'token': '',
+        }
+
+        json_str = await async_req(
+            url='https://wxapp.douyucdn.cn/api/wechatsearch/nc/search/multiv2',
+            proxy_addr=self.proxy_addr,
+            headers=self.base_headers,
+            data=data
+        )
+        json_data = json.loads(json_str)
+
+        if not process_data:
+            return json_data
+
+        live_data = json_data['data']['recom']
+        result = {
+            "anchor_name": live_data.get('nickname'),
+            "is_live": False,
+            "live_url": url,
+            "source": "app"
+        }
+        if live_data.get('isLive') == 1:
+            result |= {
+                "anchor_name": live_data.get('nickname'),
+                "is_live": live_data.get('isLive') == 1,
+                "live_url": url,
+                "title": live_data.get('roomName'),
+                'flv_url': live_data.get('stream'),
+                'record_url': live_data.get('stream'),
+                "quality": "OD"
+            }
+        return result
+
+    async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
+        """
+        Fetches web stream data for a live room.
+
+        Args:
+            url (str): The room URL.
+            process_data (bool): Whether to process the data. Defaults to True.
+
+        Returns:
+            dict: A dictionary containing anchor name, live status, room URL, and title.
+        """
+        rid = await self.get_room_id(url)
 
         json_str = await async_req(
             url=f'https://{self.WEB_DOMAIN}/betard/{rid}',
@@ -139,6 +184,10 @@ class DouyuLiveStream(BaseLiveStream):
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
         platform = '斗鱼直播'
+        if json_data.get('source') == "app":
+            json_data.pop('source')
+            json_data |= {"platform": platform, 'extra': {'backup_url_list': []}}
+            return wrap_stream(json_data)
 
         rid = str(json_data["room_id"])
         json_data.pop("room_id")
@@ -164,17 +213,17 @@ class DouyuLiveStream(BaseLiveStream):
 
         flv_url_list = []
 
-        async def get_url(rid: str, rate: str, cdn: str | None = None):
-            flv_data = await self._fetch_web_stream_url(rid=rid, rate=rate, cdn=cdn)
-            if flv_data.get('error') != 0:
+        async def get_url(_rid: str, _rate: str, _cdn: str | None = None):
+            _flv_data = await self._fetch_web_stream_url(rid=_rid, rate=_rate, cdn=_cdn)
+            if _flv_data.get('error') != 0:
                 return
-            info = flv_data.get('data')
+            info = _flv_data.get('data')
             if not info:
                 return
-            flv_url = f"{info['rtmp_url']}/{info['rtmp_live']}"
-            if flv_url not in flv_url_list:
-                flv_url_list.append(flv_url)
-            return flv_data
+            _flv_url = f"{info['rtmp_url']}/{info['rtmp_live']}"
+            if _flv_url not in flv_url_list:
+                flv_url_list.append(_flv_url)
+            return _flv_data
 
         if not json_data['is_live']:
             json_data |= {
@@ -186,7 +235,7 @@ class DouyuLiveStream(BaseLiveStream):
             }
             return wrap_stream(json_data)
 
-        flv_data = await get_url(rid=rid, rate=rate, cdn=cdn)
+        flv_data = await get_url(_rid=rid, _rate=rate, _cdn=cdn)
 
         if flv_data and flv_data.get('data'):
             rtmp_cdn = flv_data['data'].get('rtmp_cdn')
@@ -194,7 +243,7 @@ class DouyuLiveStream(BaseLiveStream):
 
             for item in cdn_list:
                 if item['cdn'] != rtmp_cdn:
-                    await get_url(rid=rid, rate=rate, cdn=item['cdn'])
+                    await get_url(_rid=rid, _rate=rate, _cdn=item['cdn'])
 
         if flv_url_list:
             flv_url = flv_url_list[0]
