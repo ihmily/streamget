@@ -1,5 +1,6 @@
 import json
 import re
+import urllib.parse
 from operator import itemgetter
 
 from ...data import StreamData, wrap_stream
@@ -11,9 +12,11 @@ class TikTokLiveStream(BaseLiveStream):
     """
     A class for fetching and processing TikTok live stream information.
     """
-    def __init__(self, proxy_addr: str | None = None, cookies: str | None = None):
+    def __init__(self, proxy_addr: str | None = None, cookies: str | None = None, is_hevc: bool | None = False):
         super().__init__(proxy_addr, cookies)
         self.pc_headers = self._get_pc_headers()
+        self.mobile_headers = self._get_pc_headers()
+        self.is_hevc = is_hevc
 
     def _get_pc_headers(self) -> dict:
         return {
@@ -23,6 +26,34 @@ class TikTokLiveStream(BaseLiveStream):
             'cookie': self.cookies or 'ttwid=1%7Ctzsy_yRGZ2N8AI7luDz2s9H9a8CQI3ZisibOcuw5OHs%7C1761301927'
                                       '%7C484a25162facd523ee6e2997187c9fad4a512c031d9efc6eaddb2c4bae8ce3fb'
         }
+
+    def _get_mobile_headers(self) -> dict:
+        return {
+            'referer': 'https://www.tiktok.com/',
+            'user-agent': 'Mozilla/5.0 (Linux; Android 13; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/145.0.0.0 Mobile Safari/537.36 Edg/145.0.0.0',
+            'cookie': self.cookies or 'ttwid=1%7CyxuNXNlyQp_OPMecm9xbQwWNc6jLL9UppAoBoT4dxdo%7C1773305415'
+                                      '%7C4f5ee0da3c5cd9c068fb21adb88106bb3d5df22463f58c60a023d066a8a3fdb0'
+        }
+
+    async def fetch_app_stream_data(self, url: str, process_data: bool = True) -> dict:
+        uid = re.search('https://www.tiktok.com/@(.*?)/live', url).group(1)
+
+        params = {
+            "aid": "1988",
+            "app_language": "en",
+            "os": "android",
+            "referer": "https://www.tiktok.com/",
+            "sourceType": "54",
+            "uniqueId": uid,
+        }
+        api = 'https://www.tiktok.com/api-live/user/room?' + urllib.parse.urlencode(params)
+        json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+        if not json_str:
+            return {'live_url': url}
+        json_data = json.loads(json_str)
+        json_data['live_url'] = url
+        return json_data
 
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
         """
@@ -52,7 +83,8 @@ class TikTokLiveStream(BaseLiveStream):
             return json_data
         return {'live_url': url}
 
-    async def fetch_stream_url(self, json_data: dict, video_quality: str | int | None = None) -> StreamData:
+    async def fetch_stream_url(
+            self, json_data: dict, video_quality: str | int | None = None, is_hevc: bool | None = False) -> StreamData:
         """
         Fetches the stream URL for a live room and wraps it into a StreamData object.
         """
@@ -60,7 +92,7 @@ class TikTokLiveStream(BaseLiveStream):
             return wrap_stream({})
 
         live_url = json_data.get("live_url")
-        if 'LiveRoom' not in json_data:
+        if 'LiveRoom' not in json_data and 'data' not in json_data:
             return wrap_stream({"platform": "TikTok", "anchor_name": None, "is_live": False, "live_url": live_url})
 
         def get_video_quality_url(stream, q_key) -> list:
@@ -86,7 +118,10 @@ class TikTokLiveStream(BaseLiveStream):
             play_list.sort(key=lambda x: (-x['vbitrate'], -x['resolution'][0], -x['resolution'][1]))
             return play_list
 
-        live_room = json_data['LiveRoom']['liveRoomUserInfo']
+        if 'LiveRoom' in json_data:
+            live_room = json_data['LiveRoom']['liveRoomUserInfo']
+        else:
+            live_room = json_data['data']
         user = live_room['user']
         anchor_name = f"{user['nickname']}-{user['uniqueId']}"
         status = user.get("status", 4)
@@ -97,11 +132,14 @@ class TikTokLiveStream(BaseLiveStream):
             "is_live": False,
             "live_url": live_url
         }
-
         if status == 2:
             if 'streamData' not in live_room['liveRoom']:
                 raise Exception("This live stream may be uncomfortable for some viewers. Log in to confirm your age")
-            data = live_room['liveRoom']['streamData']['pull_data']['stream_data']
+            if (self.is_hevc or is_hevc) and live_room['liveRoom'].get('hevcStreamData'):
+                stream_type = 'hevcStreamData'
+            else:
+                stream_type = 'streamData'
+            data = live_room['liveRoom'][stream_type]['pull_data']['stream_data']
             data = json.loads(data).get('data', {})
             flv_url_list = get_video_quality_url(data, 'flv')
             m3u8_url_list = get_video_quality_url(data, 'hls')
