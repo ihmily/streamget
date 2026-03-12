@@ -108,6 +108,8 @@ class DouyinLiveStream(BaseLiveStream):
         else:
             json_data = json.loads(json_str)['data']
             if not json_data.get('data') or not json_data['data']:
+                if "prompts" in json_data:
+                    raise Exception(json_data["prompts"])
                 raise Exception("VR live is not supported")
 
             room_data = json_data['data'][0]
