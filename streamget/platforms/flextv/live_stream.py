@@ -96,7 +96,7 @@ class FlexTVLiveStream(BaseLiveStream):
                 new_cookies = await self.login_flextv()
                 if not new_cookies:
                     raise RuntimeError("FlexTV login failed")
-                cookies = new_cookies if new_cookies else self.cookies
+                cookies = new_cookies or self.cookies
                 self.pc_headers['Cookie'] = cookies
                 html_str = await async_req(url2, proxy_addr=self.proxy_addr, headers=self.pc_headers)
                 json_str = re.search('<script id="__NEXT_DATA__" type=".*">(.*?)</script>', html_str).group(1)

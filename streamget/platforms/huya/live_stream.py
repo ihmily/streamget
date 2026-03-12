@@ -88,7 +88,7 @@ class HuyaLiveStream(BaseLiveStream):
         else:
             live_title = json_data['data']['liveData']['introduction']
             live_type = json_data['data']['liveData']["gameHostName"]
-            if live_type in ['lol']:
+            if live_type == 'lol':
                 return await self.fetch_web_stream_data(live_url)
 
             base_steam_info_list = json_data['data']['stream']['baseSteamInfoList']

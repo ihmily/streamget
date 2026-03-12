@@ -47,7 +47,7 @@ class DouyinLiveStream(BaseLiveStream):
 
                 sdk_params = json.loads(sdk_params_str) if isinstance(sdk_params_str, str) else sdk_params_str
                 vbitrate = sdk_params.get("vbitrate")
-                if not isinstance(vbitrate, (int, float)) or vbitrate <= 0:
+                if not isinstance(vbitrate, int | float) or vbitrate <= 0:
                     continue
 
                 flv_url = main.get("flv", "")
