@@ -35,8 +35,24 @@ class VVXQLiveStream(BaseLiveStream):
             dict: A dictionary containing anchor name, live status, room URL, and title.
         """
         room_id = self.get_params(url, "roomId")
-        api_1 = f'https://h5p.vvxqiu.com/activity-center/fanclub/activity/captain/banner?roomId={room_id}&product=vvstar'
-        json_str = await async_req(api_1, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+
+        room_api = 'https://h5p.vvxqiu.com/room/video/getRoomData.do?roomId=' + room_id
+        resp = await async_req(room_api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
+        json_data = json.loads(resp)
+        anchor_name = json_data.get('nickName')
+        video_url = json_data.get('videoUrl')
+        status = json_data.get('status') == 100 and video_url
+        if status:
+            return {
+                "anchor_name": anchor_name,
+                "is_live": True,
+                "m3u8_url": video_url,
+                "record_url": video_url,
+                "live_url": url
+            }
+
+        api = f'https://h5p.vvxqiu.com/activity-center/fanclub/activity/captain/banner?roomId={room_id}&product=vvstar'
+        json_str = await async_req(api, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
         json_data = json.loads(json_str)
         anchor_name = json_data['data']['anchorName']
         if not anchor_name:
@@ -54,12 +70,11 @@ class VVXQLiveStream(BaseLiveStream):
             json_data = json.loads(json_str)
             anchor_name = json_data['data']['memberVO']['memberName']
 
-        result = {"anchor_name": anchor_name, "is_live": False, "live_url": url}
-        m3u8_url = f'https://liveplay-pro.wasaixiu.com/live/1400442770_{room_id}_{room_id[2:]}_single.m3u8'
-        resp = await async_req(m3u8_url, proxy_addr=self.proxy_addr, headers=self.mobile_headers)
-        if 'Not Found' not in resp:
-            result |= {'is_live': True, 'm3u8_url': m3u8_url, 'record_url': m3u8_url}
-        return result
+        return {
+            "anchor_name": anchor_name,
+            "is_live": False,
+            "live_url": url
+        }
 
     @staticmethod
     async def fetch_stream_url(json_data: dict, video_quality: str | int | None = None) -> StreamData:
