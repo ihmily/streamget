@@ -5,7 +5,7 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
     name='streamget',
-    version='4.0.9',
+    version='4.0.10',
     author='Hmily',
     description='A Multi-Platform Live Stream Parser Library.',
     long_description=readme,
@@ -21,13 +21,14 @@ setup(
     },
     packages=find_packages(),
     install_requires=[
-        'requests>=2.31.0',
+        'requests>=2.31.1',
         'loguru>=0.7.3',
         'pycryptodome>=3.20.0',
         'distro>=1.9.0',
-        'tqdm>=4.67.1',
+        'tqdm>=4.67.3',
         'httpx[http2]>=0.28.1',
         'PyExecJS>=1.5.1',
+        "deprecated>=1.3.1"
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
