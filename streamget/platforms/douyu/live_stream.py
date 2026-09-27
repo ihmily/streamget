@@ -1,21 +1,122 @@
-import hashlib
+import base64
 import json
+import random
 import re
 import time
+from urllib.parse import parse_qsl, urlencode, urlparse
 
 from ...data import StreamData, wrap_stream
 from ...requests.async_http import async_req
 from ..base import BaseLiveStream
+from .douyu_signature import DEFAULT_DEVICE_ID, amd, csign, header_auth
+
+DOUYU_HUOS_DOMAIN = "openflv-huos.douyucdn2.cn"
+DOUYU_P2P_DOMAIN_TCT = "hdltctwk.douyucdn.cn"
+DOUYU_P2PSDK_APIS = (
+    "https://sdkapiv4.douyucdn.cn",
+    "https://sdkapi.douyucdn.cn",
+)
+PLAY_CLIENT_DOMAIN = "playclient.douyucdn.cn"
+ANDROID_APP_VERSION = "8.2.2.0"
+
+WS_EXPIRE_OVERRIDE = "&expire=0"
+
+
+def _trim_end_matches(s: str, suffix: str) -> str:
+    if not suffix:
+        return s
+    while s.endswith(suffix):
+        s = s[: -len(suffix)]
+    return s
+
+
+def _random_android_device() -> str:
+    def letter() -> str:
+        return chr(ord("A") + random.randint(0, 25))
+
+    return (
+        f"{letter()}{letter()}{letter()}-"
+        f"{letter()}{letter()}{random.randint(0, 9)}{random.randint(0, 9)}"
+    )
+
+
+def _is_wangsu_stream(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    host = parsed.hostname or ""
+    if host.startswith("ws") and (
+        host.endswith(".douyucdn.cn") or host.endswith(".douyucdn2.cn")
+    ):
+        return True
+    return any(
+        k == "fcdn" and v == "ws"
+        for k, v in parse_qsl(parsed.query, keep_blank_values=True)
+    )
+
+
+def _ws_expire_needs_override(url: str) -> bool:
+    if not _is_wangsu_stream(url):
+        return False
+    pairs = parse_qsl(urlparse(url).query, keep_blank_values=True)
+    expires = [v for k, v in pairs if k == "expire"]
+    return len(expires) == 1 and expires[0] != "0"
+
+
+def _with_ws_expire_override(url: str) -> str:
+    if _ws_expire_needs_override(url):
+        return url + WS_EXPIRE_OVERRIDE
+    return url
+
+
+def _parse_stream_url(url: str) -> tuple[str, list[tuple[str, str]]]:
+    parsed = urlparse(url)
+    parts = [p for p in parsed.path.split("/") if p]
+    if not parts:
+        raise RuntimeError("斗鱼 huos 源链接缺少 stream_id")
+    stream_name = parts[-1]
+    stream_id = stream_name.split(".", 1)[0]
+    if not stream_id:
+        raise RuntimeError("斗鱼 huos 源链接 stream_id 为空")
+    return stream_id, parse_qsl(parsed.query, keep_blank_values=True)
+
+
+def _build_huos_url(
+    stream_id: str,
+    params: list[tuple[str, str]],
+    tx_secret: dict,
+) -> str:
+    next_params: list[tuple[str, str]] = []
+    has_fcdn = False
+
+    for key, value in params:
+        if key in ("txSecret", "txTime", "domain"):
+            continue
+        if key == "fcdn":
+            if not has_fcdn:
+                next_params.append((key, "hs"))
+                has_fcdn = True
+            continue
+        next_params.append((key, value))
+
+    if not has_fcdn:
+        next_params.append(("fcdn", "hs"))
+    next_params.append(("txSecret", tx_secret["tx_secret"]))
+    next_params.append(("txTime", tx_secret["tx_time"]))
+    next_params.append(("domain", DOUYU_P2P_DOMAIN_TCT))
+
+    clean_stream_id = re.sub(r'_\d+$', '', stream_id)
+
+    return f"http://{DOUYU_HUOS_DOMAIN}/live/{clean_stream_id}.xs?{urlencode(next_params)}"
 
 
 class DouyuLiveStream(BaseLiveStream):
-    """
-    A class for fetching and processing Douyu live stream information.
-    """
-    DEFAULT_DID = "10000000000000000000000000001501"
     WEB_DOMAIN = "www.douyu.com"
-    PLAY_DOMAIN = "playweb.douyucdn.cn"
     MOBILE_DOMAIN = "m.douyu.com"
+
+    APP_CDN = "hs-h5"
+    FORCE_HS = True
 
     USER_AGENT = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -31,14 +132,6 @@ class DouyuLiveStream(BaseLiveStream):
         if cookies:
             self.base_headers['cookie'] = cookies
 
-    def _get_headers(self, *, origin: bool = False, content_type: bool = False) -> dict:
-        headers = self.base_headers.copy()
-        if origin:
-            headers['origin'] = f'https://{self.WEB_DOMAIN}'
-        if content_type:
-            headers['content-type'] = 'application/x-www-form-urlencoded'
-        return headers
-
     async def get_room_id(self, url):
         match_rid = re.search('douyu.com/(\\d+)', url) or re.search('rid=(\\d+)', url)
         if match_rid:
@@ -53,58 +146,7 @@ class DouyuLiveStream(BaseLiveStream):
             rid = re.search('"rid":(\\d+)', html_str).group(1)
         return rid
 
-    async def fetch_app_stream_data(self, url: str, process_data: bool = True):
-
-        rid = await self.get_room_id(url)
-
-        data = {
-            'sk': rid,
-            'log_token': '',
-            'ct_code': '26',
-            'token': '',
-        }
-
-        json_str = await async_req(
-            url='https://wxapp.douyucdn.cn/api/wechatsearch/nc/search/multiv2',
-            proxy_addr=self.proxy_addr,
-            headers=self.base_headers,
-            data=data
-        )
-        json_data = json.loads(json_str)
-
-        if not process_data:
-            return json_data
-
-        live_data = json_data['data']['recom']
-        result = {
-            "anchor_name": live_data.get('nickname'),
-            "is_live": False,
-            "live_url": url,
-            "source": "app"
-        }
-        if live_data.get('isLive') == 1:
-            result |= {
-                "anchor_name": live_data.get('nickname'),
-                "is_live": live_data.get('isLive') == 1,
-                "live_url": url,
-                "title": live_data.get('roomName'),
-                'flv_url': live_data.get('stream'),
-                'record_url': live_data.get('stream'),
-                "quality": "OD"
-            }
-        return result
-
     async def fetch_web_stream_data(self, url: str, process_data: bool = True) -> dict:
-        """
-        Fetches web stream data for a live room.
-
-        Args:
-            url (str): The room URL.
-            process_data (bool): Whether to process the data. Defaults to True.
-
-        Returns:
-            dict: A dictionary containing anchor name, live status, room URL, and title.
-        """
         rid = await self.get_room_id(url)
 
         json_str = await async_req(
@@ -132,63 +174,143 @@ class DouyuLiveStream(BaseLiveStream):
         }
         return result
 
-    async def _update_white_key(self) -> dict:
-        url = f'https://{self.WEB_DOMAIN}/wgapi/livenc/liveweb/websec/getEncryption?did={self.DEFAULT_DID}'
-        json_str = await async_req(
-            url=url,
-            proxy_addr=self.proxy_addr,
-            headers={'user-agent': self.USER_AGENT}
-        )
-        data = json.loads(json_str)
-        if data.get('error') != 0:
-            raise RuntimeError('获取白名单密钥失败')
-        return data['data']
-
     async def _fetch_web_stream_url(self, rid: str, rate: str = '-1', cdn: str | None = None) -> dict:
-        white = await self._update_white_key()
-        ts = int(time.time())
-        secret = white['rand_str']
-        salt = f"{rid}{ts}" if not white['is_special'] else ""
-        for _ in range(white['enc_time']):
-            secret = hashlib.md5((secret + white['key']).encode()).hexdigest()
-        auth = hashlib.md5((secret + white['key'] + salt).encode()).hexdigest()
+        try:
+            room_number = int(rid)
+        except (TypeError, ValueError):
+            return {'error': -1, 'msg': '斗鱼房间号无效', 'data': None}
 
-        params = {
-            'rate': rate,
-            'ver': '219032101',
+        device_id = DEFAULT_DEVICE_ID
+        path = f"/lapi/live/appGetPlayer/stream/{rid}"
+        timestamp = int(time.time())
+        device = _random_android_device()
+
+        rate_value = '0' if rate in (None, '', '-1') else str(rate)
+        effective_cdn = _trim_end_matches(cdn or self.APP_CDN, '-h5') or 'hs'
+
+        params: dict[str, str] = {
+            'txdw': '0',
+            'cdn': effective_cdn,
+            'token': '',
+            'rate': rate_value,
+            'hevc': '1',
+            'ilow': '0',
             'iar': '0',
-            'ive': '0',
-            'rid': rid,
-            'hevc': '0',
-            'fa': '0',
-            'sov': '0',
-            'enc_data': white['enc_data'],
-            'tt': ts,
-            'did': self.DEFAULT_DID,
-            'auth': auth,
+            'net': 'WIFI',
+            'device': device,
         }
-        if cdn:
-            params['cdn'] = cdn
 
-        json_str = await async_req(
-            url=f'https://{self.PLAY_DOMAIN}/lapi/live/getH5PlayV1/{rid}',
-            proxy_addr=self.proxy_addr,
-            headers=self._get_headers(origin=True, content_type=True),
-            data=params
-        )
-        return json.loads(json_str)
+        csign_value = csign(room_number, device_id, timestamp, params)
+        amd_value = amd(csign_value, device_id)
+        params['csign'] = csign_value
+        params['cptl'] = '0103'
+        params['amd'] = amd_value
+        params['client_sys'] = 'android'
+
+        auth = header_auth(path, timestamp, 'android1', params)
+
+        user_device = base64.standard_b64encode(
+            f"{device_id}|v{ANDROID_APP_VERSION}".encode()
+        ).decode()
+
+        query = urlencode(sorted(params.items()))
+        url = f"https://{PLAY_CLIENT_DOMAIN}{path}?{query}"
+
+        headers = {
+            'User-Device': user_device,
+            'aid': 'android1',
+            'channel': '447',
+            'User-Agent': f"android/{ANDROID_APP_VERSION} (android 16; ; {device})",
+            'time': str(timestamp),
+            'auth': auth,
+            'Cookie': f'acf_did={device_id}',
+        }
+
+        try:
+            body = await async_req(
+                url=url,
+                proxy_addr=self.proxy_addr,
+                headers=headers,
+            )
+        except Exception as err:
+            return {'error': -1, 'msg': f'请求斗鱼播放信息失败: {err}', 'data': None}
+
+        try:
+            parsed = json.loads(body)
+        except (json.JSONDecodeError, TypeError) as err:
+            return {'error': -1, 'msg': f'解析斗鱼播放信息失败: {err}', 'data': None}
+
+        if parsed.get('error', 0) != 0:
+            return {
+                'error': parsed.get('error', -1),
+                'msg': parsed.get('msg', '') or '',
+                'data': None,
+            }
+
+        play_info = parsed.get('data')
+        if not isinstance(play_info, dict):
+            return {'error': -1, 'msg': '斗鱼播放信息缺少 data', 'data': None}
+
+        return {
+            'error': 0,
+            'msg': '',
+            'data': {
+                'rtmp_url': play_info.get('rtmp_url', ''),
+                'rtmp_live': play_info.get('rtmp_live', ''),
+            },
+        }
+
+    async def _apply_stream_transforms(self, url: str, cdn: str | None = None) -> str:
+        effective_cdn = cdn or self.APP_CDN
+        if self.FORCE_HS and effective_cdn == self.APP_CDN:
+            url = await self._maybe_build_huos_url(url)
+        return _with_ws_expire_override(url)
+
+    async def _maybe_build_huos_url(self, raw_stream_url: str) -> str:
+        try:
+            stream_id, params = _parse_stream_url(raw_stream_url)
+            tx_secret = await self._get_txsecret(stream_id)
+            return _build_huos_url(stream_id, params, tx_secret)
+        except Exception:
+            return raw_stream_url
+
+    async def _get_txsecret(self, stream_id: str) -> dict:
+        apis = list(DOUYU_P2PSDK_APIS)
+        random.shuffle(apis)
+
+        last_error: Exception | None = None
+        for api in apis:
+            try:
+                return await self._request_txsecret(api, stream_id)
+            except Exception as err:
+                last_error = err
+
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError(f"获取 txSecret 失败: {stream_id}")
+
+    async def _request_txsecret(self, api: str, stream_id: str) -> dict:
+        try:
+            rsp_text = await async_req(
+                url=f"{api}/p2p/get_txsecret?lid={stream_id}",
+                proxy_addr=self.proxy_addr,
+                headers={"user-agent": self.USER_AGENT},
+            )
+            data = json.loads(rsp_text)
+        except Exception as err:
+            raise RuntimeError(
+                f"获取 txSecret 失败 api: {api}, stream_id: {stream_id}: {err}"
+            ) from err
+
+        tx_secret = data.get("xp2p_txSecret") or ""
+        tx_time = data.get("xp2p_txTime") or ""
+        if not tx_secret or not tx_time:
+            raise RuntimeError(f"txSecret 为空: {stream_id}")
+        return {"tx_secret": tx_secret, "tx_time": tx_time}
 
     async def fetch_stream_url(
             self, json_data: dict, video_quality: str | int | None = None, cdn: str | None = None) -> StreamData:
-        """
-        Fetches the stream URL for a live room and wraps it into a StreamData object.
-        """
         platform = '斗鱼直播'
-        if json_data.get('source') == "app":
-            json_data.pop('source')
-            json_data |= {"platform": platform, 'extra': {'backup_url_list': []}}
-            return wrap_stream(json_data)
-
         rid = str(json_data["room_id"])
         json_data.pop("room_id")
 
@@ -221,6 +343,7 @@ class DouyuLiveStream(BaseLiveStream):
             if not info:
                 return
             _flv_url = f"{info['rtmp_url']}/{info['rtmp_live']}"
+            _flv_url = await self._apply_stream_transforms(_flv_url, _cdn)
             if _flv_url not in flv_url_list:
                 flv_url_list.append(_flv_url)
             return _flv_data
